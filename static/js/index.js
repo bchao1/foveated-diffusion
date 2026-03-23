@@ -1,6 +1,6 @@
 window.HELP_IMPROVE_VIDEOJS = false;
 
-// Simple CSV parser: handles quoted fields with commas inside.
+// Simple CSV parser
 function parseCSV(text) {
   var lines = text.split('\n');
   var map = {};
@@ -23,7 +23,6 @@ function loadCSV(url) {
   return fetch(url).then(function (r) { return r.text(); }).then(parseCSV);
 }
 
-// Parses a CSV where rows are ordered; uses 0-based row index (after header) as key.
 function parseOrderedCSV(text) {
   var lines = text.split('\n');
   var map = {};
@@ -46,17 +45,7 @@ function loadOrderedCSV(url) {
   return fetch(url).then(function (r) { return r.text(); }).then(parseOrderedCSV);
 }
 
-function shuffle(arr) {
-  for (var i = arr.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-  }
-  return arr;
-}
-
-// Maps a normalized coordinate (0–1) to a grid index (0 to N-1).
-// The first and last 20% each map to a single cell (0 and N-1).
-// The center 60% is divided evenly among cells 1 to N-2.
+// Maps a normalized coordinate (0-1) to a grid index with 20% margins
 function marginGridIndex(t, N) {
   if (t <= 0.2) return 0;
   if (t >= 0.8) return N - 1;
@@ -66,11 +55,8 @@ function marginGridIndex(t, N) {
 // ---------------------------------------------------------------------------
 // Image preloading cache
 // ---------------------------------------------------------------------------
-
-// Cache: key -> Image object (loaded or loading)
 var imageCache = {};
 
-// Preload a single image URL, returning the Image from cache
 function preloadImage(url) {
   if (imageCache[url]) return imageCache[url];
   var img = new Image();
@@ -79,8 +65,8 @@ function preloadImage(url) {
   return img;
 }
 
-// Preload an array of URLs in batches; calls onDone when ALL are loaded.
-function preloadBatch(urls, concurrency, onDone) {
+// Preload URLs in batches; calls onProgress(loaded, total) and onDone() when complete.
+function preloadBatch(urls, concurrency, onDone, onProgress) {
   concurrency = concurrency || 6;
   var idx = 0;
   var loaded = 0;
@@ -88,6 +74,7 @@ function preloadBatch(urls, concurrency, onDone) {
   if (total === 0) { if (onDone) onDone(); return; }
   function done() {
     loaded++;
+    if (onProgress) onProgress(loaded, total);
     if (loaded >= total) { if (onDone) { onDone(); onDone = null; } return; }
     next();
   }
@@ -95,11 +82,19 @@ function preloadBatch(urls, concurrency, onDone) {
     while (idx < urls.length) {
       var url = urls[idx++];
       var cached = imageCache[url];
-      // Already fully loaded — count it and continue loop (no recursion)
-      if (cached && cached.complete) { loaded++; if (loaded >= total) { if (onDone) { onDone(); onDone = null; } return; } continue; }
-      // Already started by another batch — listen for completion
+      if (cached && cached.complete) {
+        loaded++;
+        if (onProgress) onProgress(loaded, total);
+        if (loaded >= total) { if (onDone) { onDone(); onDone = null; } return; }
+        continue;
+      }
       if (cached) {
-        if (cached.complete) { loaded++; if (loaded >= total) { if (onDone) { onDone(); onDone = null; } return; } continue; }
+        if (cached.complete) {
+          loaded++;
+          if (onProgress) onProgress(loaded, total);
+          if (loaded >= total) { if (onDone) { onDone(); onDone = null; } return; }
+          continue;
+        }
         var settled = false;
         (function (img) {
           function settle() { if (!settled) { settled = true; done(); } }
@@ -108,7 +103,6 @@ function preloadBatch(urls, concurrency, onDone) {
         })(cached);
         return;
       }
-      // New image — create, cache, and start loading
       var img = new Image();
       imageCache[url] = img;
       img.onload = img.onerror = done;
@@ -119,37 +113,50 @@ function preloadBatch(urls, concurrency, onDone) {
   for (var i = 0; i < Math.min(concurrency, total); i++) next();
 }
 
-// Show/hide a loading overlay by element ID
+function setImageFromCache(imgEl, url) {
+  preloadImage(url);
+  imgEl.src = url;
+}
+
+// ---------------------------------------------------------------------------
+// Loading overlay helpers with progress bar
+// ---------------------------------------------------------------------------
 function showLoading(id) {
   var el = document.getElementById(id);
-  if (el) el.style.display = 'flex';
+  if (el) {
+    el.style.display = 'flex';
+    var fill = el.querySelector('.progress-fill');
+    if (fill) fill.style.width = '0%';
+  }
 }
 function hideLoading(id) {
   var el = document.getElementById(id);
   if (el) el.style.display = 'none';
 }
-
-// Set an <img> element's src from cache (instant if preloaded)
-function setImageFromCache(imgEl, url) {
-  var cached = imageCache[url];
-  if (cached && cached.complete && cached.naturalWidth > 0) {
-    // Already loaded — swap src for instant display
-    imgEl.src = url;
-  } else {
-    // Not yet cached or still loading — preload and set
-    preloadImage(url);
-    imgEl.src = url;
-  }
+function updateProgress(id, loaded, total) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var pct = Math.round(loaded / total * 100);
+  var fill = el.querySelector('.progress-fill');
+  if (fill) fill.style.width = pct + '%';
+  var text = el.querySelector('.progress-text');
+  if (text) text.textContent = pct + '%';
 }
 
-// Debounce helper
-function debounce(fn, delay) {
-  var timer = null;
-  return function () {
-    var ctx = this, args = arguments;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(function () { fn.apply(ctx, args); }, delay);
-  };
+// Preload a video URL: resolves when canplaythrough fires
+function preloadVideo(url, onDone) {
+  var video = document.createElement('video');
+  video.preload = 'auto';
+  video.muted = true;
+  function done() {
+    video.oncanplaythrough = null;
+    video.onerror = null;
+    if (onDone) { onDone(); onDone = null; }
+  }
+  video.oncanplaythrough = done;
+  video.onerror = done;
+  video.src = url;
+  video.load();
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -169,7 +176,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // ---------------------------------------------------------------------------
 
   var baseline720pVideoIds = [12, 15, 1, 24, 20, 28, 34, 36, 41, 14, 19];
-
   var video720pEl = document.getElementById('baseline-720p-video');
   var prev720pBtn = document.getElementById('baseline-720p-prev');
   var next720pBtn = document.getElementById('baseline-720p-next');
@@ -184,6 +190,10 @@ document.addEventListener('DOMContentLoaded', function () {
   if (video720pEl && baseline720pVideoIds.length > 0) {
     var currentIndex720p = 0;
 
+    function baseline720pUrl(idx) {
+      return './static/videos/baselines_720p/' + baseline720pVideoIds[idx] + '.mp4';
+    }
+
     function updateBaseline720pPrompt() {
       if (!baseline720pPromptEl) return;
       var fileId = String(baseline720pVideoIds[currentIndex720p]);
@@ -193,10 +203,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadVideo720p(index) {
       currentIndex720p = index;
-      video720pEl.src = './static/videos/baselines_720p/' + baseline720pVideoIds[currentIndex720p] + '.mp4';
+      showLoading('baseline-720p-loading');
+      var url = baseline720pUrl(index);
+      video720pEl.src = url;
       video720pEl.load();
-      video720pEl.play().catch(function () {});
       updateBaseline720pPrompt();
+
+      function onReady() {
+        video720pEl.removeEventListener('canplaythrough', onReady);
+        hideLoading('baseline-720p-loading');
+        video720pEl.play().catch(function () {});
+        // Preload neighbors
+        var nextIdx = (index + 1) % baseline720pVideoIds.length;
+        var prevIdx = (index - 1 + baseline720pVideoIds.length) % baseline720pVideoIds.length;
+        preloadVideo(baseline720pUrl(nextIdx), function () {});
+        preloadVideo(baseline720pUrl(prevIdx), function () {});
+      }
+      video720pEl.addEventListener('canplaythrough', onReady, { once: true });
     }
 
     loadVideo720p(0);
@@ -222,7 +245,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // ---------------------------------------------------------------------------
 
   var baselineImageIds = [8, 10, 35, 29, 61, 3];
-
   var baselineImgEl = document.getElementById('baseline-img');
   var baselineImgPrevBtn = document.getElementById('baseline-img-prev');
   var baselineImgNextBtn = document.getElementById('baseline-img-next');
@@ -244,14 +266,27 @@ document.addEventListener('DOMContentLoaded', function () {
       baselineImgPromptEl.textContent = prompt || '';
     }
 
+    function baselineImgUrls() {
+      return baselineImageIds.map(function (id) {
+        return './static/images/baselines/' + String(id).padStart(5, '0') + '.png';
+      });
+    }
+
     function loadBaselineImg(index) {
       currentImgIndex = index;
-      var padded = String(baselineImageIds[currentImgIndex]).padStart(5, '0');
+      var padded = String(baselineImageIds[index]).padStart(5, '0');
       setImageFromCache(baselineImgEl, './static/images/baselines/' + padded + '.png');
       updateBaselineImgPrompt();
     }
 
-    loadBaselineImg(0);
+    // Preload all baseline images (only 6, small) then show
+    showLoading('baseline-img-loading');
+    preloadBatch(baselineImgUrls(), 6, function () {
+      hideLoading('baseline-img-loading');
+      loadBaselineImg(0);
+    }, function (loaded, total) {
+      updateProgress('baseline-img-loading', loaded, total);
+    });
 
     if (baselineImgPrevBtn) {
       baselineImgPrevBtn.addEventListener('click', function () {
@@ -263,12 +298,6 @@ document.addEventListener('DOMContentLoaded', function () {
         loadBaselineImg((currentImgIndex + 1) % baselineImageIds.length);
       });
     }
-
-    // Preload all baseline images
-    baselineImageIds.forEach(function (id) {
-      var padded = String(id).padStart(5, '0');
-      preloadImage('./static/images/baselines/' + padded + '.png');
-    });
   }
 
   // ---------------------------------------------------------------------------
@@ -276,7 +305,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // ---------------------------------------------------------------------------
 
   var fovTrajIds = [153, 157, 176, 180, 184, 228, 234, 275, 388, 432, 463, 471, 125, 133, 138];
-
   var fovVideo = document.getElementById('fov-traj-video');
   var fovPrev = document.getElementById('fov-traj-prev');
   var fovNext = document.getElementById('fov-traj-next');
@@ -292,6 +320,10 @@ document.addEventListener('DOMContentLoaded', function () {
   if (fovVideo && fovTrajIds.length > 0) {
     var fovIdx = 0;
 
+    function fovVideoUrl(idx) {
+      return './static/videos/fov_traj/' + fovTrajIds[idx] + '.mp4';
+    }
+
     function updateFovPrompt() {
       if (!fovPromptEl) return;
       var fileId = String(fovTrajIds[fovIdx]);
@@ -301,10 +333,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadFovVideo(index) {
       fovIdx = index;
-      fovVideo.src = './static/videos/fov_traj/' + fovTrajIds[fovIdx] + '.mp4';
+      showLoading('fov-traj-video-loading');
+      var url = fovVideoUrl(index);
+      fovVideo.src = url;
       fovVideo.load();
-      fovVideo.play().catch(function () {});
       updateFovPrompt();
+
+      function onReady() {
+        fovVideo.removeEventListener('canplaythrough', onReady);
+        hideLoading('fov-traj-video-loading');
+        fovVideo.play().catch(function () {});
+        // Preload neighbors
+        var nextIdx = (index + 1) % fovTrajIds.length;
+        var prevIdx = (index - 1 + fovTrajIds.length) % fovTrajIds.length;
+        preloadVideo(fovVideoUrl(nextIdx), function () {});
+        preloadVideo(fovVideoUrl(prevIdx), function () {});
+      }
+      fovVideo.addEventListener('canplaythrough', onReady, { once: true });
     }
 
     loadFovVideo(0);
@@ -378,7 +423,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var fovTrajImgPrev = document.getElementById('fov-traj-img-prev');
   var fovTrajImgNext = document.getElementById('fov-traj-img-next');
 
-  // Build all URLs for a given fov-traj sample
   function fovTrajUrlsForId(id) {
     var urls = [];
     for (var c = 0; c < 100; c++) {
@@ -401,14 +445,22 @@ document.addEventListener('DOMContentLoaded', function () {
       setImageFromCache(fovTrajMask2x, './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
     }
 
-    function preloadFovTrajSample(idx, onDone) {
+    function preloadFovTrajSample(idx, onDone, onProgress) {
       var id = fovTrajImgIds[idx];
-      preloadBatch(fovTrajUrlsForId(id), 8, onDone);
+      preloadBatch(fovTrajUrlsForId(id), 8, onDone, onProgress);
+    }
+
+    function eagerLoadFovTrajDefault() {
+      var id = fovTrajImgIds[fovTrajImgIndex];
+      var padded = String(44).padStart(4, '0');
+      fovTrajImg2x.src = './static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.png';
+      fovTrajMask2x.src = './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png';
     }
 
     function preloadFovTrajCurrent() {
       showLoading('fov-traj-img-loading');
       fovTrajReady = false;
+      eagerLoadFovTrajDefault();
       preloadFovTrajSample(fovTrajImgIndex, function () {
         fovTrajReady = true;
         hideLoading('fov-traj-img-loading');
@@ -419,6 +471,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var prevIdx = (fovTrajImgIndex - 1 + fovTrajImgIds.length) % fovTrajImgIds.length;
         setTimeout(function () { preloadFovTrajSample(nextIdx); }, 1000);
         setTimeout(function () { preloadFovTrajSample(prevIdx); }, 2000);
+      }, function (loaded, total) {
+        updateProgress('fov-traj-img-loading', loaded, total);
       });
     }
 
@@ -466,7 +520,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var bboxNext      = document.getElementById('bbox-next');
 
   if (bboxImgEl && saliencyImgEl && bboxMaskImgEl && varySlider) {
-    var varyImageCount = 0;
+    var bboxReady = false;
 
     function varyRadiusFolders() {
       var id = varyRadiusIds[varyRadiusIndex];
@@ -485,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function () {
       probe.src = folder + 'img_' + padded + '.png';
     }
 
-    function preloadVaryRadiusSample(sampleIdx, count, onDone) {
+    function preloadVaryRadiusSample(sampleIdx, count, onDone, onProgress) {
       var id = varyRadiusIds[sampleIdx];
       var bboxFolder = './static/images/vary_radius_new/bbox/' + id + '/';
       var saliencyFolder = './static/images/vary_radius_new/saliency/' + id + '/';
@@ -497,19 +551,20 @@ document.addEventListener('DOMContentLoaded', function () {
         urls.push(saliencyFolder + 'img_' + padded + '.png');
         urls.push(maskFolder + 'tokenization_mask_' + padded + '.png');
       }
-      preloadBatch(urls, 6, onDone);
+      preloadBatch(urls, 6, onDone, onProgress);
     }
-
-    var bboxReady = false;
 
     function loadVaryRadius() {
       var folders = varyRadiusFolders();
       showLoading('bbox-loading');
       bboxReady = false;
       varySlider.disabled = true;
+      // Eagerly show first image behind the spinner
+      bboxImgEl.src = folders.bbox + 'img_0000.png';
+      saliencyImgEl.src = folders.saliency + 'img_0000.png';
+      bboxMaskImgEl.src = folders.mask + 'tokenization_mask_0000.png';
       probeImages(folders.bbox, 0, [], function (ids) {
         if (ids.length === 0) return;
-        varyImageCount = ids.length;
         varySlider.min = 0;
         varySlider.max = ids.length - 1;
         varySlider.value = 0;
@@ -521,7 +576,6 @@ document.addEventListener('DOMContentLoaded', function () {
           setImageFromCache(bboxMaskImgEl, folders.mask + 'tokenization_mask_' + padded + '.png');
         }
 
-        // Preload all images, then enable slider
         preloadVaryRadiusSample(varyRadiusIndex, ids.length, function () {
           bboxReady = true;
           hideLoading('bbox-loading');
@@ -536,6 +590,8 @@ document.addEventListener('DOMContentLoaded', function () {
           // Preload neighbors
           var nextIdx = (varyRadiusIndex + 1) % varyRadiusIds.length;
           setTimeout(function () { preloadVaryRadiusSample(nextIdx, ids.length); }, 2000);
+        }, function (loaded, total) {
+          updateProgress('bbox-loading', loaded, total);
         });
       });
     }
@@ -557,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ---------------------------------------------------------------------------
-  // Teaser — 2x3 grid: 3 resolution factors (1x, 2x, 4x) × (image + tokenization)
+  // Teaser — 2x3 grid: 3 resolution factors (1x, 2x, 4x) x (image + tokenization)
   // ---------------------------------------------------------------------------
 
   var teaserImg1x = document.getElementById('teaser-img-1x');
@@ -585,7 +641,17 @@ document.addEventListener('DOMContentLoaded', function () {
       setImageFromCache(teaserMask4x, './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + padded + '.png');
     }
 
-    // Preload all teaser images; show spinner until ALL are loaded
+    // Eagerly show center cell (44) behind the spinner
+    (function () {
+      var p = String(44).padStart(4, '0');
+      teaserImg1x.src = './static/images/fov_traj_grid_10x10_1x/random/006/img_0000.png';
+      teaserMask1x.src = './static/images/tokenization_masks_1x/tokenization_mask_0000.png';
+      teaserImg2x.src = './static/images/fov_traj_grid_10x10_2x/random/006/img_' + p + '.png';
+      teaserMask2x.src = './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + p + '.png';
+      teaserImg4x.src = './static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + p + '.png';
+      teaserMask4x.src = './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + p + '.png';
+    })();
+
     showLoading('teaser-loading');
     (function () {
       var allUrls = [];
@@ -602,6 +668,8 @@ document.addEventListener('DOMContentLoaded', function () {
         teaserReady = true;
         hideLoading('teaser-loading');
         loadTeaserGridImg(44);
+      }, function (loaded, total) {
+        updateProgress('teaser-loading', loaded, total);
       });
     })();
 
@@ -623,9 +691,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // ---------------------------------------------------------------------------
 
   var saliencyGridIds = [];
-  var saliencyStartId = 0;
-  var saliencyEndId = 4;
-  for (var si = saliencyStartId; si <= saliencyEndId; si++) saliencyGridIds.push(String(si).padStart(3, '0'));
+  for (var si = 0; si <= 4; si++) saliencyGridIds.push(String(si).padStart(3, '0'));
   var saliencyGridN = 10;
   var saliencyGridIndex = 0;
   var saliencyLastCell = -1;
@@ -637,7 +703,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var saliencyGridPrev = document.getElementById('saliency-grid-prev');
   var saliencyGridNext = document.getElementById('saliency-grid-next');
 
-  // Build all URLs for a given saliency sample
   function saliencyUrlsForId(id) {
     var urls = [];
     for (var c = 0; c < 100; c++) {
@@ -671,14 +736,23 @@ document.addEventListener('DOMContentLoaded', function () {
       setImageFromCache(saliencyGridMaskImg, paths.mask + 'tokenization_mask_' + padded + '.png');
     }
 
-    function preloadSaliencySample(idx, onDone) {
+    function preloadSaliencySample(idx, onDone, onProgress) {
       var id = saliencyGridIds[idx];
-      preloadBatch(saliencyUrlsForId(id), 8, onDone);
+      preloadBatch(saliencyUrlsForId(id), 8, onDone, onProgress);
+    }
+
+    function eagerLoadSaliencyDefault() {
+      var paths = saliencyGridBasePaths();
+      var padded = String(12).padStart(4, '0');
+      saliencyGridRandomImg.src = paths.random + 'img_' + padded + '.png';
+      saliencyGridSaliencyImg.src = paths.saliency + 'img_' + padded + '.png';
+      saliencyGridMaskImg.src = paths.mask + 'tokenization_mask_' + padded + '.png';
     }
 
     function preloadSaliencyCurrent() {
       showLoading('saliency-loading');
       saliencyReady = false;
+      eagerLoadSaliencyDefault();
       preloadSaliencySample(saliencyGridIndex, function () {
         saliencyReady = true;
         hideLoading('saliency-loading');
@@ -689,6 +763,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var prevIdx = (saliencyGridIndex - 1 + saliencyGridIds.length) % saliencyGridIds.length;
         setTimeout(function () { preloadSaliencySample(nextIdx); }, 1500);
         setTimeout(function () { preloadSaliencySample(prevIdx); }, 3000);
+      }, function (loaded, total) {
+        updateProgress('saliency-loading', loaded, total);
       });
     }
 
