@@ -63,6 +63,95 @@ function marginGridIndex(t, N) {
   return Math.min(N - 2, Math.floor((t - 0.2) / 0.6 * (N - 2)) + 1);
 }
 
+// ---------------------------------------------------------------------------
+// Image preloading cache
+// ---------------------------------------------------------------------------
+
+// Cache: key -> Image object (loaded or loading)
+var imageCache = {};
+
+// Preload a single image URL, returning the Image from cache
+function preloadImage(url) {
+  if (imageCache[url]) return imageCache[url];
+  var img = new Image();
+  img.src = url;
+  imageCache[url] = img;
+  return img;
+}
+
+// Preload an array of URLs in batches; calls onDone when ALL are loaded.
+function preloadBatch(urls, concurrency, onDone) {
+  concurrency = concurrency || 6;
+  var idx = 0;
+  var loaded = 0;
+  var total = urls.length;
+  if (total === 0) { if (onDone) onDone(); return; }
+  function done() {
+    loaded++;
+    if (loaded >= total) { if (onDone) { onDone(); onDone = null; } return; }
+    next();
+  }
+  function next() {
+    while (idx < urls.length) {
+      var url = urls[idx++];
+      var cached = imageCache[url];
+      // Already fully loaded — count it and continue loop (no recursion)
+      if (cached && cached.complete) { loaded++; if (loaded >= total) { if (onDone) { onDone(); onDone = null; } return; } continue; }
+      // Already started by another batch — listen for completion
+      if (cached) {
+        if (cached.complete) { loaded++; if (loaded >= total) { if (onDone) { onDone(); onDone = null; } return; } continue; }
+        var settled = false;
+        (function (img) {
+          function settle() { if (!settled) { settled = true; done(); } }
+          img.addEventListener('load', settle, { once: true });
+          img.addEventListener('error', settle, { once: true });
+        })(cached);
+        return;
+      }
+      // New image — create, cache, and start loading
+      var img = new Image();
+      imageCache[url] = img;
+      img.onload = img.onerror = done;
+      img.src = url;
+      return;
+    }
+  }
+  for (var i = 0; i < Math.min(concurrency, total); i++) next();
+}
+
+// Show/hide a loading overlay by element ID
+function showLoading(id) {
+  var el = document.getElementById(id);
+  if (el) el.style.display = 'flex';
+}
+function hideLoading(id) {
+  var el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+// Set an <img> element's src from cache (instant if preloaded)
+function setImageFromCache(imgEl, url) {
+  var cached = imageCache[url];
+  if (cached && cached.complete && cached.naturalWidth > 0) {
+    // Already loaded — swap src for instant display
+    imgEl.src = url;
+  } else {
+    // Not yet cached or still loading — preload and set
+    preloadImage(url);
+    imgEl.src = url;
+  }
+}
+
+// Debounce helper
+function debounce(fn, delay) {
+  var timer = null;
+  return function () {
+    var ctx = this, args = arguments;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function () { fn.apply(ctx, args); }, delay);
+  };
+}
+
 document.addEventListener('DOMContentLoaded', function () {
 
   // Navbar burger toggle
@@ -76,48 +165,9 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // ---------------------------------------------------------------------------
-  // Baseline video slideshow (480p) — commented out, replaced by 720p below
-  // ---------------------------------------------------------------------------
-
-  // var baselineVideoIds = null;
-  // // var baselineVideoIds = [1, 6, 19, 39, 46, 48, 50, 55, 58, 59, 60, 62, 77, 85, 96]; // 480p
-  // var baselineVideoIds = [60, 48, 46, 58, 6, 59, 1, 96, 19, 39, 50, 55, 62, 77, 85];
-  // if (!baselineVideoIds) { baselineVideoIds = []; for (var i = 1; i <= 100; i++) baselineVideoIds.push(i); }
-  // var videoEl = document.getElementById('baseline-video');
-  // var prevBtn = document.getElementById('baseline-prev');
-  // var nextBtn = document.getElementById('baseline-next');
-  // var baselinePromptEl = document.getElementById('baseline-prompt');
-  // var baselinePrompts = {};
-  // loadCSV('./static/files/prompts/claude_prompts_new_en.csv').then(function (map) {
-  //   baselinePrompts = map;
-  //   updateBaselinePrompt();
-  // });
-  // if (!videoEl || baselineVideoIds.length === 0) return;
-  // var currentIndex = 0;
-  // function updateBaselinePrompt() {
-  //   if (!baselinePromptEl) return;
-  //   var fileId = String(baselineVideoIds[currentIndex]);
-  //   baselinePromptEl.textContent = baselinePrompts[fileId] ? '[' + fileId + '] ' + baselinePrompts[fileId] : '';
-  // }
-  // function loadVideo(index) {
-  //   currentIndex = index;
-  //   videoEl.src = './static/videos/baselines/' + baselineVideoIds[currentIndex] + '.mp4'; // 480p
-  //   videoEl.load();
-  //   videoEl.play().catch(function () {});
-  //   updateBaselinePrompt();
-  // }
-  // loadVideo(0);
-  // if (prevBtn) { prevBtn.addEventListener('click', function () { loadVideo((currentIndex - 1 + baselineVideoIds.length) % baselineVideoIds.length); }); }
-  // if (nextBtn) { nextBtn.addEventListener('click', function () { loadVideo((currentIndex + 1) % baselineVideoIds.length); }); }
-  // var baselineVideoContainer = videoEl.parentElement;
-  // baselineVideoContainer.addEventListener('mouseenter', function () { videoEl.pause(); });
-  // baselineVideoContainer.addEventListener('mouseleave', function () { videoEl.play().catch(function () {}); });
-
-  // ---------------------------------------------------------------------------
   // Baseline video slideshow (720p)
   // ---------------------------------------------------------------------------
 
-  // var baseline720pVideoIds = [12, 1, 24, 15, 20, 28, 34, 36, 41, 5, 6, 13, 14, 19, 21, 30, 43]; // old
   var baseline720pVideoIds = [12, 15, 1, 24, 20, 28, 34, 36, 41, 14, 19];
 
   var video720pEl = document.getElementById('baseline-720p-video');
@@ -197,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadBaselineImg(index) {
       currentImgIndex = index;
       var padded = String(baselineImageIds[currentImgIndex]).padStart(5, '0');
-      baselineImgEl.src = './static/images/baselines/' + padded + '.png';
+      setImageFromCache(baselineImgEl, './static/images/baselines/' + padded + '.png');
       updateBaselineImgPrompt();
     }
 
@@ -213,27 +263,19 @@ document.addEventListener('DOMContentLoaded', function () {
         loadBaselineImg((currentImgIndex + 1) % baselineImageIds.length);
       });
     }
+
+    // Preload all baseline images
+    baselineImageIds.forEach(function (id) {
+      var padded = String(id).padStart(5, '0');
+      preloadImage('./static/images/baselines/' + padded + '.png');
+    });
   }
 
   // ---------------------------------------------------------------------------
-  // Foveation trajectory slideshow
+  // Foveation trajectory video slideshow
   // ---------------------------------------------------------------------------
 
-  // To show only specific videos, uncomment and edit the line below:
-  // var fovTrajIds = [101, 105, 203, 310, 425];
-  var fovTrajIds = null;
   var fovTrajIds = [153, 157, 176, 180, 184, 228, 234, 275, 388, 432, 463, 471, 125, 133, 138];
-  // var fovTrajIds = [119, 162, 265, 269, 283, 294, 332, 334, 370, 385, 398, 423, 432, 463, 466, 471, 473, 485]; // mine
-  // var fovTrajIds = [
-  //   119, 125, 133, 138, 153, 157, 162, 176, 180, 184,
-  //   228, 234, 265, 269, 275, 283, 294, 329, 332, 334, 370,
-  //   385, 388, 398, 432, 463, 466, 471, 473, 485, 487
-  // ]; // merged
-  if (!fovTrajIds) {
-    fovTrajIds = [];
-    var ranges = [[101, 499]];
-    ranges.forEach(function (r) { for (var n = r[0]; n <= r[1]; n++) fovTrajIds.push(n); });
-  }
 
   var fovVideo = document.getElementById('fov-traj-video');
   var fovPrev = document.getElementById('fov-traj-prev');
@@ -285,42 +327,22 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ---------------------------------------------------------------------------
-  // Saliency slideshows – commented out, replaced by combined apps slideshow below
-  // ---------------------------------------------------------------------------
-
-  // document.querySelectorAll('.saliency-slideshow').forEach(function (slideshow) { ... });
-  // (old per-folder saliency slideshows: games 480p/720p, av 480p/720p, robotics 480p/720p)
-
-  // ---------------------------------------------------------------------------
-  // Mask comparison slideshow – commented out
-  // ---------------------------------------------------------------------------
-
-  // var maskVideo = document.getElementById('mask-cmp-video'); ...
-  // (old mask-cmp slideshow merged games_comparison + av_comparison + robotics_comparison)
-
-  // ---------------------------------------------------------------------------
-  // Combined applications slideshow (720p: games, driving, robotics)
+  // Combined applications grid (720p: games, driving, robotics)
   // ---------------------------------------------------------------------------
 
   var appsPages = [
-    // old games 720p ids: [1, 8, 13, 15, 23, 25, 36, 38, 56, 57, 76, 86]
     { label: 'VR Gaming',            folder: 'games_720p',    ids: [8, 15, 25],  csv: 'games_en.csv' },
-    // old av 720p ids: [2, 6, 11, 12, 19, 24, 34, 40, 74, 76, 93, 94]
     { label: 'Autonomous Driving',   folder: 'av_720p',       ids: [2, 6, 11],   csv: 'av_en.csv' },
-    // old robotics 720p ids: [3, 5, 7, 10, 11, 15, 24, 30, 45, 48, 65, 67, 75, 79, 86]
     { label: 'Robotics',             folder: 'robotics_720p', ids: [11, 67, 65], csv: 'robotics_en.csv' },
   ];
 
   var appsGrid = document.getElementById('apps-grid');
 
   if (appsGrid) {
-    // Load all 9 videos and prompts at once
     appsPages.forEach(function (pg, catIdx) {
-      // Set row label
       var rowLabel = appsGrid.querySelector('.apps-grid-row[data-category="' + catIdx + '"] .apps-row-label');
       if (rowLabel) rowLabel.textContent = pg.label;
 
-      // Set video sources
       var videos = appsGrid.querySelectorAll('video.apps-video[data-category="' + catIdx + '"]');
       videos.forEach(function (v, i) {
         v.src = './static/videos/saliency/' + pg.folder + '/' + pg.ids[i] + '.mp4';
@@ -328,7 +350,6 @@ document.addEventListener('DOMContentLoaded', function () {
         v.play().catch(function () {});
       });
 
-      // Load prompts
       loadCSV('./static/files/prompts/' + pg.csv).then(function (map) {
         var prompts = appsGrid.querySelectorAll('p.apps-prompt[data-category="' + catIdx + '"]');
         prompts.forEach(function (p, i) {
@@ -341,36 +362,69 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ---------------------------------------------------------------------------
-  // Foveation Trajectory — 2x2 image grid hover (2x + 4x) × (image + tokenization)
+  // Foveation Trajectory — image grid hover (2x: image + tokenization)
   // ---------------------------------------------------------------------------
 
-  var fovTrajImgIds = ['003', '006', '011', '012', '013', 
+  var fovTrajImgIds = ['003', '006', '011', '012', '013',
     '000', '001', '002', '099',
-  '020', '021', '023', '024'];
+    '020', '021', '023', '024'];
   var fovTrajImgN = 10;
   var fovTrajImgIndex = 0;
+  var fovTrajLastCell = -1;
 
   var fovTrajImg2x = document.getElementById('fov-traj-img-2x');
   var fovTrajMask2x = document.getElementById('fov-traj-mask-2x');
-  var fovTrajImg4x = document.getElementById('fov-traj-img-4x');
-  var fovTrajMask4x = document.getElementById('fov-traj-mask-4x');
   var fovTrajGridOverlays = document.querySelectorAll('.fov-traj-grid-overlay');
   var fovTrajImgPrev = document.getElementById('fov-traj-img-prev');
   var fovTrajImgNext = document.getElementById('fov-traj-img-next');
 
+  // Build all URLs for a given fov-traj sample
+  function fovTrajUrlsForId(id) {
+    var urls = [];
+    for (var c = 0; c < 100; c++) {
+      var padded = String(c).padStart(4, '0');
+      urls.push('./static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.png');
+      urls.push('./static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
+    }
+    return urls;
+  }
+
   if (fovTrajImg2x && fovTrajMask2x) {
+    var fovTrajReady = false;
+
     function loadFovTrajGridImg(cellIdx) {
+      if (!fovTrajReady || cellIdx === fovTrajLastCell) return;
+      fovTrajLastCell = cellIdx;
       var id = fovTrajImgIds[fovTrajImgIndex];
       var padded = String(cellIdx).padStart(4, '0');
-      fovTrajImg2x.src = './static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.png';
-      fovTrajMask2x.src = './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png';
-      if (fovTrajImg4x) fovTrajImg4x.src = './static/images/fov_traj_grid_10x10_4x/random_4x_distill/' + id + '/img_' + padded + '.png';
-      if (fovTrajMask4x) fovTrajMask4x.src = './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + padded + '.png';
+      setImageFromCache(fovTrajImg2x, './static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.png');
+      setImageFromCache(fovTrajMask2x, './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
     }
 
-    // Hover: map mouse position to grid cell with 20% margins
+    function preloadFovTrajSample(idx, onDone) {
+      var id = fovTrajImgIds[idx];
+      preloadBatch(fovTrajUrlsForId(id), 8, onDone);
+    }
+
+    function preloadFovTrajCurrent() {
+      showLoading('fov-traj-img-loading');
+      fovTrajReady = false;
+      preloadFovTrajSample(fovTrajImgIndex, function () {
+        fovTrajReady = true;
+        hideLoading('fov-traj-img-loading');
+        fovTrajLastCell = -1;
+        loadFovTrajGridImg(44);
+        // Preload neighbors in background
+        var nextIdx = (fovTrajImgIndex + 1) % fovTrajImgIds.length;
+        var prevIdx = (fovTrajImgIndex - 1 + fovTrajImgIds.length) % fovTrajImgIds.length;
+        setTimeout(function () { preloadFovTrajSample(nextIdx); }, 1000);
+        setTimeout(function () { preloadFovTrajSample(prevIdx); }, 2000);
+      });
+    }
+
     fovTrajGridOverlays.forEach(function (overlay) {
       overlay.addEventListener('mousemove', function (e) {
+        if (!fovTrajReady) return;
         var rect = overlay.getBoundingClientRect();
         var tx = (e.clientX - rect.left) / rect.width;
         var ty = (e.clientY - rect.top) / rect.height;
@@ -380,18 +434,18 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
 
-    loadFovTrajGridImg(44); // default: center cell of 10x10
+    preloadFovTrajCurrent();
 
     if (fovTrajImgPrev) {
       fovTrajImgPrev.addEventListener('click', function () {
         fovTrajImgIndex = (fovTrajImgIndex - 1 + fovTrajImgIds.length) % fovTrajImgIds.length;
-        loadFovTrajGridImg(44);
+        preloadFovTrajCurrent();
       });
     }
     if (fovTrajImgNext) {
       fovTrajImgNext.addEventListener('click', function () {
         fovTrajImgIndex = (fovTrajImgIndex + 1) % fovTrajImgIds.length;
-        loadFovTrajGridImg(44);
+        preloadFovTrajCurrent();
       });
     }
   }
@@ -404,8 +458,6 @@ document.addEventListener('DOMContentLoaded', function () {
   for (var vi = 0; vi <= 3; vi++) varyRadiusIds.push(String(vi).padStart(3, '0'));
   var varyRadiusIndex = 0;
 
-  // varyRadiusIds = ["010", "017", "022", "027"]; // selected 
-
   var bboxImgEl     = document.getElementById('bbox-img');
   var saliencyImgEl = document.getElementById('saliency-img');
   var bboxMaskImgEl = document.getElementById('bbox-mask-img');
@@ -414,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var bboxNext      = document.getElementById('bbox-next');
 
   if (bboxImgEl && saliencyImgEl && bboxMaskImgEl && varySlider) {
-    var varyImageCount = 0; // will be set after probing
+    var varyImageCount = 0;
 
     function varyRadiusFolders() {
       var id = varyRadiusIds[varyRadiusIndex];
@@ -433,8 +485,28 @@ document.addEventListener('DOMContentLoaded', function () {
       probe.src = folder + 'img_' + padded + '.png';
     }
 
+    function preloadVaryRadiusSample(sampleIdx, count, onDone) {
+      var id = varyRadiusIds[sampleIdx];
+      var bboxFolder = './static/images/vary_radius_new/bbox/' + id + '/';
+      var saliencyFolder = './static/images/vary_radius_new/saliency/' + id + '/';
+      var maskFolder = './static/images/tokenization_masks_radius_2x/';
+      var urls = [];
+      for (var i = 0; i < count; i++) {
+        var padded = String(i).padStart(4, '0');
+        urls.push(bboxFolder + 'img_' + padded + '.png');
+        urls.push(saliencyFolder + 'img_' + padded + '.png');
+        urls.push(maskFolder + 'tokenization_mask_' + padded + '.png');
+      }
+      preloadBatch(urls, 6, onDone);
+    }
+
+    var bboxReady = false;
+
     function loadVaryRadius() {
       var folders = varyRadiusFolders();
+      showLoading('bbox-loading');
+      bboxReady = false;
+      varySlider.disabled = true;
       probeImages(folders.bbox, 0, [], function (ids) {
         if (ids.length === 0) return;
         varyImageCount = ids.length;
@@ -444,15 +516,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
         function loadVaryImg(idx) {
           var padded = String(ids[idx]).padStart(4, '0');
-          bboxImgEl.src     = folders.bbox     + 'img_' + padded + '.png';
-          saliencyImgEl.src = folders.saliency + 'img_' + padded + '.png';
-          bboxMaskImgEl.src = folders.mask + 'tokenization_mask_' + padded + '.png';
+          setImageFromCache(bboxImgEl, folders.bbox + 'img_' + padded + '.png');
+          setImageFromCache(saliencyImgEl, folders.saliency + 'img_' + padded + '.png');
+          setImageFromCache(bboxMaskImgEl, folders.mask + 'tokenization_mask_' + padded + '.png');
         }
 
-        loadVaryImg(0);
-        varySlider.oninput = function () {
-          loadVaryImg(parseInt(this.value, 10));
-        };
+        // Preload all images, then enable slider
+        preloadVaryRadiusSample(varyRadiusIndex, ids.length, function () {
+          bboxReady = true;
+          hideLoading('bbox-loading');
+          varySlider.disabled = false;
+          loadVaryImg(0);
+
+          varySlider.oninput = function () {
+            if (!bboxReady) return;
+            loadVaryImg(parseInt(this.value, 10));
+          };
+
+          // Preload neighbors
+          var nextIdx = (varyRadiusIndex + 1) % varyRadiusIds.length;
+          setTimeout(function () { preloadVaryRadiusSample(nextIdx, ids.length); }, 2000);
+        });
       });
     }
 
@@ -484,24 +568,46 @@ document.addEventListener('DOMContentLoaded', function () {
   var teaserMask4x = document.getElementById('teaser-mask-4x');
   var teaserGridOverlays = document.querySelectorAll('.teaser-grid-overlay');
   var teaserGridN = 10;
+  var teaserLastCell = -1;
 
   if (teaserImg1x && teaserImg2x && teaserImg4x && teaserMask1x && teaserMask2x && teaserMask4x) {
+    var teaserReady = false;
+
     function loadTeaserGridImg(cellIdx) {
+      if (!teaserReady || cellIdx === teaserLastCell) return;
+      teaserLastCell = cellIdx;
       var padded = String(cellIdx).padStart(4, '0');
-      // 1x: single image, does not vary with cell
-      teaserImg1x.src = './static/images/fov_traj_grid_10x10_1x/random/006/img_0000.png';
-      teaserMask1x.src = './static/images/tokenization_masks_1x/tokenization_mask_0000.png';
-      // 2x
-      teaserImg2x.src = './static/images/fov_traj_grid_10x10_2x/random/006/img_' + padded + '.png';
-      teaserMask2x.src = './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png';
-      // 4x
-      teaserImg4x.src = './static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + padded + '.png';
-      teaserMask4x.src = './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + padded + '.png';
+      setImageFromCache(teaserImg1x, './static/images/fov_traj_grid_10x10_1x/random/006/img_0000.png');
+      setImageFromCache(teaserMask1x, './static/images/tokenization_masks_1x/tokenization_mask_0000.png');
+      setImageFromCache(teaserImg2x, './static/images/fov_traj_grid_10x10_2x/random/006/img_' + padded + '.png');
+      setImageFromCache(teaserMask2x, './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
+      setImageFromCache(teaserImg4x, './static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + padded + '.png');
+      setImageFromCache(teaserMask4x, './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + padded + '.png');
     }
 
-    // Hover: map mouse position to grid cell with 20% margins
+    // Preload all teaser images; show spinner until ALL are loaded
+    showLoading('teaser-loading');
+    (function () {
+      var allUrls = [];
+      allUrls.push('./static/images/fov_traj_grid_10x10_1x/random/006/img_0000.png');
+      allUrls.push('./static/images/tokenization_masks_1x/tokenization_mask_0000.png');
+      for (var c = 0; c < 100; c++) {
+        var padded = String(c).padStart(4, '0');
+        allUrls.push('./static/images/fov_traj_grid_10x10_2x/random/006/img_' + padded + '.png');
+        allUrls.push('./static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
+        allUrls.push('./static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + padded + '.png');
+        allUrls.push('./static/images/tokenization_masks_10x10_4x/tokenization_mask_' + padded + '.png');
+      }
+      preloadBatch(allUrls, 12, function () {
+        teaserReady = true;
+        hideLoading('teaser-loading');
+        loadTeaserGridImg(44);
+      });
+    })();
+
     teaserGridOverlays.forEach(function (overlay) {
       overlay.addEventListener('mousemove', function (e) {
+        if (!teaserReady) return;
         var rect = overlay.getBoundingClientRect();
         var tx = (e.clientX - rect.left) / rect.width;
         var ty = (e.clientY - rect.top) / rect.height;
@@ -510,9 +616,6 @@ document.addEventListener('DOMContentLoaded', function () {
         loadTeaserGridImg(row * teaserGridN + col);
       });
     });
-
-    // Load default image (center cell: 44 = center of 10x10)
-    loadTeaserGridImg(44);
   }
 
   // ---------------------------------------------------------------------------
@@ -525,8 +628,7 @@ document.addEventListener('DOMContentLoaded', function () {
   for (var si = saliencyStartId; si <= saliencyEndId; si++) saliencyGridIds.push(String(si).padStart(3, '0'));
   var saliencyGridN = 10;
   var saliencyGridIndex = 0;
-  
-  // saliencyGridIds = ["011", "013", "017", "026", "028"]; // 5x5 selection
+  var saliencyLastCell = -1;
 
   var saliencyGridRandomImg = document.getElementById('saliency-grid-random-img');
   var saliencyGridSaliencyImg = document.getElementById('saliency-grid-saliency-img');
@@ -535,7 +637,21 @@ document.addEventListener('DOMContentLoaded', function () {
   var saliencyGridPrev = document.getElementById('saliency-grid-prev');
   var saliencyGridNext = document.getElementById('saliency-grid-next');
 
+  // Build all URLs for a given saliency sample
+  function saliencyUrlsForId(id) {
+    var urls = [];
+    for (var c = 0; c < 100; c++) {
+      var padded = String(c).padStart(4, '0');
+      urls.push('./static/images/vary_position_grid_10x10/random/' + id + '/img_' + padded + '.png');
+      urls.push('./static/images/vary_position_grid_10x10/saliency/' + id + '/img_' + padded + '.png');
+      urls.push('./static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
+    }
+    return urls;
+  }
+
   if (saliencyGridRandomImg && saliencyGridSaliencyImg && saliencyGridMaskImg && saliencyGridOverlays.length === 3) {
+    var saliencyReady = false;
+
     function saliencyGridBasePaths() {
       var id = saliencyGridIds[saliencyGridIndex];
       return {
@@ -546,16 +662,39 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function loadSaliencyGridImg(cellIdx) {
+      if (!saliencyReady || cellIdx === saliencyLastCell) return;
+      saliencyLastCell = cellIdx;
       var paths = saliencyGridBasePaths();
       var padded = String(cellIdx).padStart(4, '0');
-      saliencyGridRandomImg.src = paths.random + 'img_' + padded + '.png';
-      saliencyGridSaliencyImg.src = paths.saliency + 'img_' + padded + '.png';
-      saliencyGridMaskImg.src = paths.mask + 'tokenization_mask_' + padded + '.png';
+      setImageFromCache(saliencyGridRandomImg, paths.random + 'img_' + padded + '.png');
+      setImageFromCache(saliencyGridSaliencyImg, paths.saliency + 'img_' + padded + '.png');
+      setImageFromCache(saliencyGridMaskImg, paths.mask + 'tokenization_mask_' + padded + '.png');
     }
 
-    // Hover: map mouse position to grid cell with 20% margins
+    function preloadSaliencySample(idx, onDone) {
+      var id = saliencyGridIds[idx];
+      preloadBatch(saliencyUrlsForId(id), 8, onDone);
+    }
+
+    function preloadSaliencyCurrent() {
+      showLoading('saliency-loading');
+      saliencyReady = false;
+      preloadSaliencySample(saliencyGridIndex, function () {
+        saliencyReady = true;
+        hideLoading('saliency-loading');
+        saliencyLastCell = -1;
+        loadSaliencyGridImg(12);
+        // Preload neighbors in background
+        var nextIdx = (saliencyGridIndex + 1) % saliencyGridIds.length;
+        var prevIdx = (saliencyGridIndex - 1 + saliencyGridIds.length) % saliencyGridIds.length;
+        setTimeout(function () { preloadSaliencySample(nextIdx); }, 1500);
+        setTimeout(function () { preloadSaliencySample(prevIdx); }, 3000);
+      });
+    }
+
     saliencyGridOverlays.forEach(function (overlay) {
       overlay.addEventListener('mousemove', function (e) {
+        if (!saliencyReady) return;
         var rect = overlay.getBoundingClientRect();
         var tx = (e.clientX - rect.left) / rect.width;
         var ty = (e.clientY - rect.top) / rect.height;
@@ -565,17 +704,15 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
 
-    // Load default image (center cell: 12)
-    loadSaliencyGridImg(12);
+    preloadSaliencyCurrent();
 
-    // Slideshow navigation
     saliencyGridPrev.addEventListener('click', function () {
       saliencyGridIndex = (saliencyGridIndex - 1 + saliencyGridIds.length) % saliencyGridIds.length;
-      loadSaliencyGridImg(12);
+      preloadSaliencyCurrent();
     });
     saliencyGridNext.addEventListener('click', function () {
       saliencyGridIndex = (saliencyGridIndex + 1) % saliencyGridIds.length;
-      loadSaliencyGridImg(12);
+      preloadSaliencyCurrent();
     });
   }
 });

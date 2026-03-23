@@ -100,6 +100,30 @@
       .grid-hover-area {
         cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><circle cx='8' cy='8' r='7' fill='%23ff0000'/></svg>") 8 8, crosshair !important;
       }
+      .demo-loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+        pointer-events: none;
+      }
+      .demo-loading-overlay .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #dbdbdb;
+        border-top-color: #363636;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
     </style>
   </head>
   <body>
@@ -199,7 +223,8 @@
         <!-- Teaser. -->
         <div class="columns is-centered has-text-centered">
           <div class="column is-full-width">
-            <div style="margin: 0 auto 1.5rem auto; position: relative;">
+            <div id="teaser-demo" style="margin: 0 auto 1.5rem auto; position: relative;">
+              <div id="teaser-loading" class="demo-loading-overlay"><div class="spinner"></div></div>
               <!-- Column headers -->
               <div style="display: flex; gap: 0.25rem; margin-bottom: 0.5rem;">
                 <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>Full high resolution</strong></p></div>
@@ -586,7 +611,8 @@
               </p>
             </div>
 
-            <div style="display: flex; flex-direction: column; align-items: center; margin: 0 auto 1.5rem auto; width: 41.1vw;">
+            <div id="fov-traj-img-demo" style="display: flex; flex-direction: column; align-items: center; margin: 0 auto 1.5rem auto; width: 41.1vw; position: relative;">
+              <div id="fov-traj-img-loading" class="demo-loading-overlay"><div class="spinner"></div></div>
               <!-- Column headers -->
               <div style="display: flex; gap: 0.75rem; width: 100%; margin-bottom: 0.5rem;">
                 <div style="width: 50px; flex-shrink: 0;"></div>
@@ -718,14 +744,17 @@
               </p>
             </div>
             <div
+              id="saliency-demo"
               style="
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 margin: 0 auto 1.5rem auto;
                 width: 50vw;
+                position: relative;
               "
             >
+              <div id="saliency-loading" class="demo-loading-overlay"><div class="spinner"></div></div>
               <div style="display: flex; align-items: center; gap: 0.75rem">
                 <button
                   id="saliency-grid-prev"
@@ -1078,14 +1107,17 @@
               </p>
             </div>
             <div
+              id="bbox-demo"
               style="
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 margin: 0 auto 1.5rem auto;
                 width: 50vw;
+                position: relative;
               "
             >
+              <div id="bbox-loading" class="demo-loading-overlay"><div class="spinner"></div></div>
               <div style="display: flex; align-items: center; gap: 0.75rem">
                 <button
                   id="bbox-prev"
