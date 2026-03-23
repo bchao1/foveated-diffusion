@@ -119,28 +119,60 @@ function setImageFromCache(imgEl, url) {
 }
 
 // ---------------------------------------------------------------------------
-// Loading overlay helpers with progress bar
+// Cursor-following loading blob
 // ---------------------------------------------------------------------------
-function showLoading(id) {
-  var el = document.getElementById(id);
-  if (el) {
-    el.style.display = 'flex';
-    var fill = el.querySelector('.progress-fill');
-    if (fill) fill.style.width = '0%';
+var loadingCursor = null;
+var loadingCursorFill = null;
+var loadingCursorText = null;
+// Track which demos are currently loading
+var activeLoadingDemos = {};
+
+function initLoadingCursor() {
+  loadingCursor = document.getElementById('loading-cursor');
+  if (loadingCursor) {
+    loadingCursorFill = loadingCursor.querySelector('.progress-fill');
+    loadingCursorText = loadingCursor.querySelector('.progress-text');
   }
+  // Follow mouse globally
+  document.addEventListener('mousemove', function (e) {
+    if (loadingCursor && loadingCursor.style.display === 'flex') {
+      loadingCursor.style.left = e.clientX + 'px';
+      loadingCursor.style.top = e.clientY + 'px';
+    }
+  });
 }
+
+function showLoading(id) {
+  activeLoadingDemos[id] = { pct: 0 };
+  updateLoadingCursorVisibility();
+}
+
 function hideLoading(id) {
-  var el = document.getElementById(id);
-  if (el) el.style.display = 'none';
+  delete activeLoadingDemos[id];
+  updateLoadingCursorVisibility();
 }
+
 function updateProgress(id, loaded, total) {
-  var el = document.getElementById(id);
-  if (!el) return;
   var pct = Math.round(loaded / total * 100);
-  var fill = el.querySelector('.progress-fill');
-  if (fill) fill.style.width = pct + '%';
-  var text = el.querySelector('.progress-text');
-  if (text) text.textContent = pct + '%';
+  if (activeLoadingDemos[id]) activeLoadingDemos[id].pct = pct;
+  // Show the progress of whichever demo the user is near (use highest pct active)
+  var maxPct = 0;
+  for (var key in activeLoadingDemos) {
+    if (activeLoadingDemos[key].pct > maxPct) maxPct = activeLoadingDemos[key].pct;
+  }
+  if (loadingCursorFill) loadingCursorFill.style.width = pct + '%';
+  if (loadingCursorText) loadingCursorText.textContent = pct + '%';
+}
+
+function updateLoadingCursorVisibility() {
+  if (!loadingCursor) return;
+  var anyActive = false;
+  for (var key in activeLoadingDemos) { anyActive = true; break; }
+  loadingCursor.style.display = anyActive ? 'flex' : 'none';
+  if (!anyActive) {
+    if (loadingCursorFill) loadingCursorFill.style.width = '0%';
+    if (loadingCursorText) loadingCursorText.textContent = '0%';
+  }
 }
 
 // Preload a video URL: resolves when canplaythrough fires
@@ -160,6 +192,8 @@ function preloadVideo(url, onDone) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+
+  initLoadingCursor();
 
   // Navbar burger toggle
   var burgers = document.querySelectorAll('.navbar-burger');

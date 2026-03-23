@@ -100,47 +100,46 @@
       .grid-hover-area {
         cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><circle cx='8' cy='8' r='7' fill='%23ff0000'/></svg>") 8 8, crosshair !important;
       }
-      .demo-loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.85);
-        display: flex;
+      .demo-loading-cursor {
+        position: fixed;
+        z-index: 9999;
+        pointer-events: none;
+        display: none;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
-        z-index: 200;
-        pointer-events: none;
+        background: rgba(255,255,255,0.92);
+        border-radius: 10px;
+        padding: 8px 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        transform: translate(12px, 12px);
       }
-      .demo-loading-overlay .spinner {
-        width: 36px;
-        height: 36px;
-        border: 3px solid #dbdbdb;
+      .demo-loading-cursor .spinner {
+        width: 22px;
+        height: 22px;
+        border: 2.5px solid #dbdbdb;
         border-top-color: #363636;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
       }
-      .demo-loading-overlay .progress-bar {
-        width: 120px;
-        height: 4px;
+      .demo-loading-cursor .progress-bar {
+        width: 60px;
+        height: 3px;
         background: #e8e8e8;
         border-radius: 2px;
-        margin-top: 10px;
+        margin-top: 6px;
         overflow: hidden;
       }
-      .demo-loading-overlay .progress-fill {
+      .demo-loading-cursor .progress-fill {
         width: 0%;
         height: 100%;
         background: #363636;
         border-radius: 2px;
         transition: width 0.15s ease;
       }
-      .demo-loading-overlay .progress-text {
-        font-size: 0.7rem;
+      .demo-loading-cursor .progress-text {
+        font-size: 0.6rem;
         color: #888;
-        margin-top: 4px;
+        margin-top: 2px;
       }
       @keyframes spin {
         to { transform: rotate(360deg); }
@@ -248,8 +247,7 @@
         <div class="columns is-centered has-text-centered">
           <div class="column is-full-width">
             <div id="teaser-demo" style="margin: 0 auto 1.5rem auto; position: relative; min-height: 300px;">
-              <div id="teaser-loading" class="demo-loading-overlay"><div class="spinner"></div><div class="progress-bar"><div class="progress-fill"></div></div><div class="progress-text">0%</div></div>
-              <!-- Column headers -->
+                            <!-- Column headers -->
               <div style="display: flex; gap: 0.25rem; margin-bottom: 0.5rem;">
                 <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>Full high resolution</strong></p></div>
                 <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>1/2x resolution periphery</strong></p></div>
@@ -470,8 +468,7 @@
             <!-- Baseline Image Comparisons -->
             <h4 class="title is-5" style="margin-bottom: 0.75rem">Image Generation</h4>
             <div class="demo-container" style="min-height: 200px;">
-              <div id="baseline-img-loading" class="demo-loading-overlay"><div class="spinner"></div><div class="progress-bar"><div class="progress-fill"></div></div><div class="progress-text">0%</div></div>
-              <div style="display: flex; align-items: center; gap: 0.75rem">
+                            <div style="display: flex; align-items: center; gap: 0.75rem">
                 <button
                   id="baseline-img-prev"
                   style="
@@ -544,8 +541,7 @@
               Video Generation
             </h4>
             <div class="demo-container" style="width: 75vw; position: relative; left: 50%; transform: translateX(-50%); min-height: 200px;">
-              <div id="baseline-720p-loading" class="demo-loading-overlay"><div class="spinner"></div><div class="progress-bar"><div class="progress-fill"></div></div><div class="progress-text">0%</div></div>
-              <div style="display: flex; align-items: center; gap: 0.75rem">
+                            <div style="display: flex; align-items: center; gap: 0.75rem">
                 <button
                   id="baseline-720p-prev"
                   style="
@@ -638,8 +634,7 @@
             </div>
 
             <div id="fov-traj-img-demo" style="display: flex; flex-direction: column; align-items: center; margin: 0 auto 1.5rem auto; width: 41.1vw; position: relative; min-height: 200px;">
-              <div id="fov-traj-img-loading" class="demo-loading-overlay"><div class="spinner"></div><div class="progress-bar"><div class="progress-fill"></div></div><div class="progress-text">0%</div></div>
-              <!-- Column headers -->
+                            <!-- Column headers -->
               <div style="display: flex; gap: 0.75rem; width: 100%; margin-bottom: 0.5rem;">
                 <div style="width: 50px; flex-shrink: 0;"></div>
                 <div style="flex: 1; display: flex; gap: 0.25rem;">
@@ -691,8 +686,7 @@
               class="demo-container"
               style="width: 75vw; position: relative; left: 50%; transform: translateX(-50%); min-height: 200px;"
             >
-              <div id="fov-traj-video-loading" class="demo-loading-overlay"><div class="spinner"></div><div class="progress-bar"><div class="progress-fill"></div></div><div class="progress-text">0%</div></div>
-              <div style="display: flex; align-items: center; gap: 0.75rem">
+                            <div style="display: flex; align-items: center; gap: 0.75rem">
                 <button
                   id="fov-traj-prev"
                   style="
@@ -783,8 +777,7 @@
                 min-height: 200px;
               "
             >
-              <div id="saliency-loading" class="demo-loading-overlay"><div class="spinner"></div><div class="progress-bar"><div class="progress-fill"></div></div><div class="progress-text">0%</div></div>
-              <div style="display: flex; align-items: center; gap: 0.75rem">
+                            <div style="display: flex; align-items: center; gap: 0.75rem">
                 <button
                   id="saliency-grid-prev"
                   style="
@@ -1147,8 +1140,7 @@
                 min-height: 200px;
               "
             >
-              <div id="bbox-loading" class="demo-loading-overlay"><div class="spinner"></div><div class="progress-bar"><div class="progress-fill"></div></div><div class="progress-text">0%</div></div>
-              <div style="display: flex; align-items: center; gap: 0.75rem">
+                            <div style="display: flex; align-items: center; gap: 0.75rem">
                 <button
                   id="bbox-prev"
                   style="
@@ -1344,5 +1336,10 @@
         </div>
       </div>
     </footer>
+    <div id="loading-cursor" class="demo-loading-cursor">
+      <div class="spinner"></div>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+      <div class="progress-text">0%</div>
+    </div>
   </body>
 </html>
