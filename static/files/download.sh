@@ -1,0 +1,1 @@
+scp -r brianchc@apollo:/home/brianchc/fov_video/prompts .

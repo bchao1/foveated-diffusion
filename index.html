@@ -1,0 +1,1286 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="description" content="." />
+    <meta name="keywords" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Foveated Diffusion</title>
+
+    <link
+      href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="./static/css/bulma.min.css" />
+    <link rel="stylesheet" href="./static/css/fontawesome.all.min.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css"
+    />
+    <link rel="stylesheet" href="./static/css/index.css" />
+    <link rel="icon" href="./static/images/favicon.svg" />
+
+    <script defer src="./static/js/fontawesome.all.min.js"></script>
+    <script defer src="./static/js/index.js"></script>
+    <style>
+      .video-with-prompt .video-prompt {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        line-clamp: 2;
+      }
+      .prompt-area {
+        position: relative;
+        height: 3.6em;
+        overflow: visible;
+      }
+      .prompt-expand-icon {
+        display: block;
+        text-align: center;
+        color: #bbb;
+        font-size: 0.65rem;
+        margin-top: 0.15rem;
+        cursor: default;
+      }
+      .video-with-prompt:hover .video-prompt {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        z-index: 100;
+        background: white;
+        padding: 0.4rem 0.6rem;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        border-radius: 6px;
+        overflow: visible;
+        display: block;
+        -webkit-line-clamp: unset;
+        -webkit-box-orient: unset;
+      }
+      .video-with-prompt:hover .prompt-expand-icon {
+        visibility: hidden;
+      }
+      #bbox-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 8px;
+        background: #dbdbdb;
+        border-radius: 4px;
+        outline: none;
+      }
+      #bbox-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: white;
+        border: 1px solid #dbdbdb;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      }
+      #bbox-slider::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: white;
+        border: 1px solid #dbdbdb;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      }
+      .col-label {
+        margin-bottom: 0.4rem;
+        min-height: 3em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .grid-hover-area {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><circle cx='8' cy='8' r='7' fill='%23ff0000'/></svg>") 8 8, crosshair !important;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="hero">
+      <div class="hero-body">
+        <div class="container is-full-width">
+          <div class="columns is-centered">
+            <div class="column has-text-centered">
+              <h1 class="title is-1 publication-title">
+                <span style="font-weight: 900">Foveated Diffusion:</span>
+                <br />
+                <span style="font-weight: 100">
+                  Efficient Spatially Aware Image and Video Generation
+                </span>
+              </h1>
+              <div class="is-size-5 publication-authors">
+                <span class="author-block">
+                  <a href="https://bchao1.github.io/">Brian Chao</a>
+                  *
+                </span>
+                <span class="author-block">
+                  <a href="https://lioryariv.github.io/">Lior Yariv</a>
+                  *
+                </span>
+                <span class="author-block">
+                  <a href="https://howardxiao.ca/">Howard Xiao</a>
+                </span>
+                <span class="author-block">
+                  <a href="https://web.stanford.edu/~gordonwz/">Gordon Wetzstein</a>
+                </span>
+              </div>
+
+              <div class="is-size-5 publication-authors">
+                <span class="author-block">Stanford University</span>
+              </div>
+              <p style="font-size: smaller">*equal contribution</p>
+
+              <div class="column has-text-centered">
+                <div class="publication-links">
+                  <span class="link-block">
+                    <a href="" class="external-link button is-normal is-rounded is-dark">
+                      <span class="icon">
+                        <i class="fas fa-file-pdf"></i>
+                      </span>
+                      <span>Paper</span>
+                    </a>
+                  </span>
+
+                  <span class="link-block">
+                    <a href="" class="external-link button is-normal is-rounded is-dark">
+                      <span class="icon">
+                        <i class="ai ai-arxiv"></i>
+                      </span>
+                      <span>arXiv</span>
+                    </a>
+                  </span>
+
+                  <span class="link-block">
+                    <a class="external-link button is-normal is-rounded is-dark" disabled style="pointer-events: none; opacity: 0.5;">
+                      <span class="icon">
+                        <i class="fab fa-github"></i>
+                      </span>
+                      <span>Code (coming soon!)</span>
+                    </a>
+                  </span>
+
+                  <!--
+                <span class="link-block">
+                  <a href=""
+                     class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-youtube"></i>
+                    </span>
+                    <span>Video</span>
+                  </a>
+                </span>
+
+                <span class="link-block">
+                  <a href=""
+                     class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-google-drive"></i>
+                    </span>
+                    <span>Paper (High-Res)</span>
+                  </a>
+                </span>
+                --></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="margin-top: -4rem">
+      <div class="container is-max-desktop">
+        <!-- Teaser. -->
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-full-width">
+            <div style="margin: 0 auto 1.5rem auto; position: relative;">
+              <!-- Column headers -->
+              <div style="display: flex; gap: 0.25rem; margin-bottom: 0.5rem;">
+                <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>Full high resolution</strong></p></div>
+                <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>1/2x resolution periphery</strong></p></div>
+                <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>1/4x resolution periphery</strong></p></div>
+              </div>
+              <!-- Row 1: Generated images -->
+              <div style="display: flex; gap: 0.25rem; position: relative;">
+                <div style="position: absolute; right: 100%; top: 0; bottom: 0; display: flex; align-items: center; padding-right: 0.75rem; white-space: nowrap;"><p class="is-size-6"><strong>Generated image</strong></p></div>
+                <div style="flex: 1;">
+                  <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                    <img id="teaser-img-1x" style="width: 100%; display: block;" alt="">
+                    <div class="teaser-grid-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                  </div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                    <img id="teaser-img-2x" style="width: 100%; display: block;" alt="">
+                    <div class="teaser-grid-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                  </div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                    <img id="teaser-img-4x" style="width: 100%; display: block;" alt="">
+                    <div class="teaser-grid-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                  </div>
+                </div>
+              </div>
+              <!-- Row 2: Tokenization -->
+              <div style="display: flex; gap: 0.25rem; margin-top: 0.25rem; position: relative;">
+                <div style="position: absolute; right: 100%; top: 0; bottom: 0; display: flex; align-items: center; padding-right: 0.75rem; white-space: nowrap;"><p class="is-size-6"><strong>Tokenization</strong></p></div>
+                <div style="flex: 1;">
+                  <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                    <img id="teaser-mask-1x" style="width: 100%; display: block;" alt="">
+                    <div class="teaser-grid-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                  </div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                    <img id="teaser-mask-2x" style="width: 100%; display: block;" alt="">
+                    <div class="teaser-grid-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                  </div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                    <img id="teaser-mask-4x" style="width: 100%; display: block;" alt="">
+                    <div class="teaser-grid-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="content has-text-justified">
+              <p>
+              <em>Foveated Diffusion</em> employs non-uniform tokenization to concentrate 
+              high-resolution tokens on the region of interest (white circle) while using 
+              low-resolution tokens in the periphery. 
+              We achieve a <strong>2×</strong> speedup 
+              for image generation and <strong>4×</strong> for video generation at <strong>1/2×</strong> peripheral resolution, with even higher speedups at <strong>1/4×</strong> peripheral resolution.  
+              Please hover over the images for the interactive demo.
+              </p>
+            </div>
+          </div>
+        </div>
+        <!--/ Teaser. -->
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container is-max-desktop">
+        <!-- Abstract. -->
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-full-width">
+            <h2 class="title is-3">Abstract</h2>
+            <div class="content has-text-justified">
+              <p>
+                Diffusion and flow matching models have unlocked unprecedented capabilities for
+                creative content creation, such as interactive image and streaming video generation.
+                The growing demand for higher resolutions, frame rates, and context lengths,
+                however, makes efficient generation increasingly challenging, as computational
+                complexity grows quadratically with the number of generated tokens.
+              </p>
+              <p>
+                Our work seeks to optimize the efficiency of the generation process in settings
+                where the user's gaze location is known or can be estimated, for example, by using
+                eye tracking. In these settings, we leverage the eccentricity-dependent acuity of
+                human vision: while a user perceives very high-resolution visual information in a
+                small region around their gaze location (the foveal region), the ability to resolve
+                detail quickly degrades in the periphery of the visual field.
+              </p>
+              <p>
+                Our approach starts with a mask modeling the foveated resolution to allocate tokens
+                non-uniformly, assigning higher token density to foveal regions and lower density to
+                peripheral regions. An image or video is generated in a mixed-resolution token
+                setting, yielding results perceptually indistinguishable from full-resolution
+                generation, while drastically reducing the token count and generation time. To this
+                end, we develop a principled mechanism for constructing mixed-resolution tokens
+                directly from high-resolution data, allowing a foveated diffusion model to be
+                post-trained from an existing base model while maintaining content consistency
+                across resolutions.
+              </p>
+              <p>
+                We validate our approach through extensive analysis and a carefully designed user
+                study, demonstrating the efficacy of foveation as a practical and scalable axis for
+                efficient generation.
+              </p>
+            </div>
+          </div>
+        </div>
+        <!--/ Abstract. -->
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container is-max-desktop">
+        <!-- Model Pipeline. -->
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-full-width">
+            <h2 class="title is-3">Overview</h2>
+            <div class="content has-text-justified" style="position: relative; z-index: 1; margin-bottom: -2rem;">
+              <p>
+                In
+                <strong>Foveated Generation</strong>
+                , we iteratively denoise a foveated token sequence of reduced length instead of the
+                full high-resolution sequence. The resulting tokens are split into high- and
+                low-resolution grids, decoded by the VAE, and blended using a user-specified
+                foveation mask.
+              </p>
+            </div>
+            <div class="content has-text-centered" style="margin-bottom: 2.5rem;">
+              <img src="./static/images/pipeline_generation.svg" style="width: 100%" />
+            </div>
+
+            <div class="content has-text-justified" style="position: relative; z-index: 1; margin-bottom: -2rem;">
+              <p>
+                We employ
+                <strong>Foveated Training</strong>
+                to adapt pretrained diffusion transformers (DiTs) to foveated token sequences using
+                low-rank adaptation (LoRA). The image and its downsampled version are independently
+                encoded by the VAE encoder and merged into a clean foveated token sequence for
+                flow-matching training.
+              </p>
+            </div>
+            <div class="content has-text-centered">
+              <img src="./static/images/pipeline_training.svg" style="width: 100%" />
+            </div>
+            <!--
+          <div class="content has-text-centered" style="display: flex; justify-content: center;">
+            <div style="width: 30%; display: flex; flex-direction: column; align-items: center;">
+              <img src="./static/images/runtime.svg" style="width: 100%; object-fit: contain;">
+              <p style="margin-top: 0.5rem;"><strong>Foveated visual generation speed up</strong></p>
+            </div>
+          </div>
+          <div class="content has-text-justified">
+            <p>
+              Foveated Diffusion reduces computational cost through foveated tokenization, shrinking the
+              effective sequence length from <em>h</em>&thinsp;&middot;&thinsp;<em>w</em> (images) or
+              <em>f</em>&thinsp;&middot;&thinsp;<em>h</em>&thinsp;&middot;&thinsp;<em>w</em> (videos)
+              to <em>L</em> tokens. We define <strong>Token Ratio</strong> as the fraction of retained
+              tokens and report the resulting <strong>Speedup</strong> relative to full-resolution
+              generation. Using only 25% of tokens yields over 2&times; speedup for images and
+              4&times; for videos, with larger gains in video due to the higher cost of spatiotemporal
+              attention.
+            </p>
+          </div>
+          -->
+            <!-- User Study -->
+            <!--
+          <div class="content has-text-centered" style="display: flex; align-items: flex-start; gap: 1rem;">
+            <div style="flex: 1; width: 0; display: flex; flex-direction: column; align-items: center;">
+              <img src="./static/images/user_study_setup.svg" style="width: 100%; height: 280px; object-fit: contain; object-position: top;">
+              <p style="margin-top: 0.5rem;"><strong>(a) User study setup</strong></p>
+            </div>
+            <div style="flex: 1; width: 0; display: flex; flex-direction: column; align-items: center;">
+              <img src="./static/images/user_study.svg" style="width: 100%; height: 280px; object-fit: contain; object-position: top;">
+              <p style="margin-top: 0.5rem;"><strong>(b) User study results</strong></p>
+            </div>
+          </div>
+          <div class="content has-text-justified">
+            <p>
+              <strong>(a)</strong> Standard generative metrics do not reflect human perception under gaze-contingent viewing,
+              so we conduct a <strong>two-alternative forced choice (2AFC)</strong> user study with a
+              pseudo eye-tracking setup. Participants fixate on a central point while two images are
+              shown sequentially for 1 second, preventing eye movements and encouraging holistic
+              judgments of visual quality.
+            </p>
+            <p>
+              <strong>(b)</strong> Foveated Diffusion matches the perceived quality of full-resolution generation and is
+              strongly preferred over a na&iuml;ve mixed-resolution baseline, while generating images
+              1.85&times; faster. These results demonstrate that Foveated Diffusion preserves perceptual
+              realism while significantly reducing computation, enabling efficient wide-field generation
+              for applications such as gaming and immersive video.
+            </p>
+          </div>
+          --></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="results-section" class="section">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-full-width">
+            <h2 class="title is-3">Results</h2>
+
+            <!-- Baseline Comparisons -->
+            <h3 class="title is-4" style="margin-top: 2rem">Baseline Comparisons</h3>
+            <div class="content has-text-justified">
+              <p>
+                We provide extended baseline comparisons of image and video generation against full
+                high-resolution generation and na&iuml;ve mixed-resolution generation using our
+                <em>randomized mask</em>
+                model. Our method consistently generates coherent content, whereas the na&iuml;ve
+                baseline exhibits significant artifacts such as scale mismatch and distorted
+                structures.
+              </p>
+            </div>
+
+            <!-- Baseline Image Comparisons -->
+            <h4 class="title is-5" style="margin-bottom: 0.75rem">Image Generation</h4>
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.75rem">
+                <button
+                  id="baseline-img-prev"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <div style="flex: 1; min-width: 0">
+                  <div
+                    class="columns is-mobile is-gapless"
+                    style="margin-bottom: 1rem; margin-top: 0rem"
+                  >
+                    <div class="column has-text-centered">
+                      <p class="is-size-6">Full high resolution</p>
+                    </div>
+                    <div class="column has-text-centered">
+                      <p class="is-size-6">Na&iuml;ve mixed resolution</p>
+                    </div>
+                    <div class="column has-text-centered">
+                      <p class="is-size-6"><strong>Foveated Diffusion (Ours)</strong></p>
+                    </div>
+                  </div>
+                  <img
+                    id="baseline-img"
+                    style="width: 100%; display: block; border-radius: 0"
+                    alt=""
+                  />
+                </div>
+                <button
+                  id="baseline-img-next"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <p
+                id="baseline-img-prompt"
+                class="has-text-centered is-size-7"
+                style="margin-top: 0.5rem; font-style: italic; color: #555"
+              ></p>
+            </div>
+
+            <!-- Baseline Video Comparisons -->
+            <h4 class="title is-5" style="margin-top: 1.5rem; margin-bottom: 0.75rem">
+              Video Generation
+            </h4>
+            <div style="width: 75vw; position: relative; left: 50%; transform: translateX(-50%)">
+              <div style="display: flex; align-items: center; gap: 0.75rem">
+                <button
+                  id="baseline-720p-prev"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <div style="flex: 1; min-width: 0">
+                  <div
+                    class="columns is-mobile is-gapless"
+                    style="margin-bottom: 1rem; margin-top: 0rem"
+                  >
+                    <div class="column has-text-centered">
+                      <p class="is-size-6">Full high resolution</p>
+                    </div>
+                    <div class="column has-text-centered">
+                      <p class="is-size-6">Na&iuml;ve mixed resolution</p>
+                    </div>
+                    <div class="column has-text-centered">
+                      <p class="is-size-6"><strong>Foveated Diffusion (Ours)</strong></p>
+                    </div>
+                  </div>
+                  <video
+                    id="baseline-720p-video"
+                    autoplay
+                    muted
+                    loop
+                    playsinline
+                    style="width: 100%; display: block; border-radius: 0"
+                  ></video>
+                </div>
+                <button
+                  id="baseline-720p-next"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <p
+                id="baseline-720p-prompt"
+                class="has-text-centered is-size-7"
+                style="margin-top: 0.5rem; font-style: italic; color: #555"
+              ></p>
+            </div>
+
+            <!-- Foveation Trajectory -->
+            <h3 class="title is-4" style="margin-top: 3rem">
+              Visual Generation with Different Foveation Masks
+            </h3>
+
+            <h4 class="title is-5" style="margin-top: 1.5rem; margin-bottom: 0.75rem">
+              Image Generation
+            </h4>
+            <div class="content has-text-justified">
+              <p>
+                We present image generation results where each image is generated with a randomly-placed circular foveation mask.
+                Given the same prompt and noise seed, Foveated Diffusion generates coherent and
+                consistent content independent of the foveation mask; the mask only determines which
+                regions are synthesized at high resolution.
+              </p>
+              <p>
+                Please try the interactive demo below by hovering the cursor over the image. The
+                foveation mask will change dynamically based on the cursor position.
+              </p>
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; margin: 0 auto 1.5rem auto; width: 41.1vw;">
+              <!-- Column headers -->
+              <div style="display: flex; gap: 0.75rem; width: 100%; margin-bottom: 0.5rem;">
+                <div style="width: 50px; flex-shrink: 0;"></div>
+                <div style="flex: 1; display: flex; gap: 0.25rem;">
+                  <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>Generated image</strong></p></div>
+                  <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>Tokenization</strong></p></div>
+                </div>
+                <div style="width: 50px; flex-shrink: 0;"></div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%;">
+                <button id="fov-traj-img-prev" style="width:50px;height:50px;border-radius:50%;border:2px solid #363636;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.25rem;color:#363636;flex-shrink:0;">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <div style="flex: 1; display: flex; gap: 0.25rem;">
+                  <div style="flex: 1;">
+                    <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                      <img id="fov-traj-img-2x" style="width: 100%; display: block;" alt="">
+                      <div class="fov-traj-grid-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                    </div>
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                      <img id="fov-traj-mask-2x" style="width: 100%; display: block;" alt="">
+                      <div class="fov-traj-grid-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                    </div>
+                  </div>
+                </div>
+                <button id="fov-traj-img-next" style="width:50px;height:50px;border-radius:50%;border:2px solid #363636;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.25rem;color:#363636;flex-shrink:0;">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+
+            <h4 class="title is-5" style="margin-top: 1.5rem; margin-bottom: 0.75rem">
+              Video Generation
+            </h4>
+            <div class="content has-text-justified">
+              <p>
+                We also present video generation results where the high-resolution region varies in shape, size, and position
+                <em>across frames</em>
+                , resulting in various mask
+                <em>trajectories</em>
+                . Given the same prompt and noise seed, Foveated Diffusion generates coherent and
+                consistent content independent of the foveation mask trajectory.
+              </p>
+            </div>
+
+            <div
+              id="fov-traj-video-container"
+              style="width: 75vw; position: relative; left: 50%; transform: translateX(-50%)"
+            >
+              <div style="display: flex; align-items: center; gap: 0.75rem">
+                <button
+                  id="fov-traj-prev"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <div style="flex: 1; min-width: 0">
+                  <video
+                    id="fov-traj-video"
+                    autoplay
+                    muted
+                    loop
+                    playsinline
+                    style="width: 100%; display: block; border-radius: 0"
+                  ></video>
+                </div>
+                <button
+                  id="fov-traj-next"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <p
+                id="fov-traj-prompt"
+                class="has-text-centered is-size-7"
+                style="margin-top: 0.5rem; font-style: italic; color: #555"
+              ></p>
+            </div>
+
+            <!-- Applications -->
+            <h3 class="title is-4" style="margin-top: 3rem">Applications</h3>
+
+            <h4 class="title is-5" style="margin-top: 1.5rem; margin-bottom: 0.75rem">
+              Saliency-guided Image Generation
+            </h4>
+            <div class="content has-text-justified">
+              <p>
+                Foveated Diffusion can be trained on
+                <strong>arbitrary</strong>
+                foveation masks, enabling various applications. We demonstrate one such application
+                by training a model for
+                <em>saliency-guided image generation</em>
+                by using DeepGaze-predicted saliency maps as foveation masks during training instead of randomly-placed masks. The
+                saliency-guided model centers the most salient object in the scene around the
+                foveation region, which is synthesized at high resolution, while peripheral regions
+                are generated at lower resolution.
+              </p>
+              <p>
+                Please hover over the images below to change the foveation mask position.
+              </p>
+            </div>
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin: 0 auto 1.5rem auto;
+                width: 50vw;
+              "
+            >
+              <div style="display: flex; align-items: center; gap: 0.75rem">
+                <button
+                  id="saliency-grid-prev"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <div style="display: flex; gap: 1rem">
+                  <div
+                    style="display: flex; flex-direction: column; align-items: center; width: 17vw"
+                  >
+                    <p class="is-size-6 has-text-centered col-label">
+                      <strong>Randomized Mask</strong>
+                    </p>
+                    <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                      <img
+                        id="saliency-grid-random-img"
+                        style="width: 100%; display: block; border-radius: 0"
+                        alt=""
+                      />
+                      <div
+                        class="saliency-grid-overlay"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
+                      ></div>
+                    </div>
+                  </div>
+                  <div
+                    style="display: flex; flex-direction: column; align-items: center; width: 17vw"
+                  >
+                    <p class="is-size-6 has-text-centered col-label">
+                      <strong>Saliency-guided</strong>
+                    </p>
+                    <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                      <img
+                        id="saliency-grid-saliency-img"
+                        style="width: 100%; display: block; border-radius: 0"
+                        alt=""
+                      />
+                      <div
+                        class="saliency-grid-overlay"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
+                      ></div>
+                    </div>
+                  </div>
+                  <div
+                    style="display: flex; flex-direction: column; align-items: center; width: 17vw"
+                  >
+                    <p class="is-size-6 has-text-centered col-label">
+                      <strong>
+                        Tokenization
+                        <br />
+                        (1/2x resolution periphery)
+                      </strong>
+                    </p>
+                    <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
+                      <img
+                        id="saliency-grid-mask-img"
+                        style="width: 100%; display: block; border-radius: 0"
+                        alt=""
+                      />
+                      <div
+                        class="saliency-grid-overlay"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  id="saliency-grid-next"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+
+            <h4 class="title is-5" style="margin-top: 1.5rem; margin-bottom: 0.75rem">
+              Saliency-guided Video Generation
+            </h4>
+            <div class="content has-text-justified">
+              <p>
+                We illustrate applications of
+                <em>saliency-guided video generation</em>
+                across VR gaming, autonomous driving simulation, and robotics. In each scenario,
+                only the most salient objects are rendered at high resolution while peripheral
+                regions are rendered at lower resolution.
+              </p>
+            </div>
+            <div
+              id="apps-grid"
+              style="width: 75vw; position: relative; left: 50%; transform: translateX(-50%)"
+            >
+              <div class="apps-grid-row" data-category="0">
+                <p
+                  class="apps-row-label has-text-centered is-size-5"
+                  style="margin-bottom: 0.5rem; font-weight: 600"
+                ></p>
+                <div style="display: flex; gap: 0.5rem">
+                  <div class="video-with-prompt" style="flex: 1; min-width: 0">
+                    <video
+                      class="apps-video"
+                      data-category="0"
+                      data-pos="0"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                    <div class="prompt-area">
+                      <p
+                        class="apps-prompt video-prompt has-text-centered is-size-7"
+                        data-category="0"
+                        data-pos="0"
+                        style="margin-top: 0.3rem; font-style: italic; color: #555"
+                      ></p>
+                      <i class="fas fa-ellipsis-h prompt-expand-icon"></i>
+                    </div>
+                  </div>
+                  <div class="video-with-prompt" style="flex: 1; min-width: 0">
+                    <video
+                      class="apps-video"
+                      data-category="0"
+                      data-pos="1"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                    <div class="prompt-area">
+                      <p
+                        class="apps-prompt video-prompt has-text-centered is-size-7"
+                        data-category="0"
+                        data-pos="1"
+                        style="margin-top: 0.3rem; font-style: italic; color: #555"
+                      ></p>
+                      <i class="fas fa-ellipsis-h prompt-expand-icon"></i>
+                    </div>
+                  </div>
+                  <div class="video-with-prompt" style="flex: 1; min-width: 0">
+                    <video
+                      class="apps-video"
+                      data-category="0"
+                      data-pos="2"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                    <div class="prompt-area">
+                      <p
+                        class="apps-prompt video-prompt has-text-centered is-size-7"
+                        data-category="0"
+                        data-pos="2"
+                        style="margin-top: 0.3rem; font-style: italic; color: #555"
+                      ></p>
+                      <i class="fas fa-ellipsis-h prompt-expand-icon"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="apps-grid-row" data-category="1" style="margin-top: 1.5rem">
+                <p
+                  class="apps-row-label has-text-centered is-size-5"
+                  style="margin-bottom: 0.5rem; font-weight: 600"
+                ></p>
+                <div style="display: flex; gap: 0.5rem">
+                  <div class="video-with-prompt" style="flex: 1; min-width: 0">
+                    <video
+                      class="apps-video"
+                      data-category="1"
+                      data-pos="0"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                    <div class="prompt-area">
+                      <p
+                        class="apps-prompt video-prompt has-text-centered is-size-7"
+                        data-category="1"
+                        data-pos="0"
+                        style="margin-top: 0.3rem; font-style: italic; color: #555"
+                      ></p>
+                      <i class="fas fa-ellipsis-h prompt-expand-icon"></i>
+                    </div>
+                  </div>
+                  <div class="video-with-prompt" style="flex: 1; min-width: 0">
+                    <video
+                      class="apps-video"
+                      data-category="1"
+                      data-pos="1"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                    <div class="prompt-area">
+                      <p
+                        class="apps-prompt video-prompt has-text-centered is-size-7"
+                        data-category="1"
+                        data-pos="1"
+                        style="margin-top: 0.3rem; font-style: italic; color: #555"
+                      ></p>
+                      <i class="fas fa-ellipsis-h prompt-expand-icon"></i>
+                    </div>
+                  </div>
+                  <div class="video-with-prompt" style="flex: 1; min-width: 0">
+                    <video
+                      class="apps-video"
+                      data-category="1"
+                      data-pos="2"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                    <div class="prompt-area">
+                      <p
+                        class="apps-prompt video-prompt has-text-centered is-size-7"
+                        data-category="1"
+                        data-pos="2"
+                        style="margin-top: 0.3rem; font-style: italic; color: #555"
+                      ></p>
+                      <i class="fas fa-ellipsis-h prompt-expand-icon"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="apps-grid-row" data-category="2" style="margin-top: 1.5rem">
+                <p
+                  class="apps-row-label has-text-centered is-size-5"
+                  style="margin-bottom: 0.5rem; font-weight: 600"
+                ></p>
+                <div style="display: flex; gap: 0.5rem">
+                  <div class="video-with-prompt" style="flex: 1; min-width: 0">
+                    <video
+                      class="apps-video"
+                      data-category="2"
+                      data-pos="0"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                    <div class="prompt-area">
+                      <p
+                        class="apps-prompt video-prompt has-text-centered is-size-7"
+                        data-category="2"
+                        data-pos="0"
+                        style="margin-top: 0.3rem; font-style: italic; color: #555"
+                      ></p>
+                      <i class="fas fa-ellipsis-h prompt-expand-icon"></i>
+                    </div>
+                  </div>
+                  <div class="video-with-prompt" style="flex: 1; min-width: 0">
+                    <video
+                      class="apps-video"
+                      data-category="2"
+                      data-pos="1"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                    <div class="prompt-area">
+                      <p
+                        class="apps-prompt video-prompt has-text-centered is-size-7"
+                        data-category="2"
+                        data-pos="1"
+                        style="margin-top: 0.3rem; font-style: italic; color: #555"
+                      ></p>
+                      <i class="fas fa-ellipsis-h prompt-expand-icon"></i>
+                    </div>
+                  </div>
+                  <div class="video-with-prompt" style="flex: 1; min-width: 0">
+                    <video
+                      class="apps-video"
+                      data-category="2"
+                      data-pos="2"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                    <div class="prompt-area">
+                      <p
+                        class="apps-prompt video-prompt has-text-centered is-size-7"
+                        data-category="2"
+                        data-pos="2"
+                        style="margin-top: 0.3rem; font-style: italic; color: #555"
+                      ></p>
+                      <i class="fas fa-ellipsis-h prompt-expand-icon"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <h4 class="title is-5" style="margin-top: 1.5rem; margin-bottom: 0.75rem">
+              Bounding-box-guided Image Generation
+            </h4>
+            <div class="content has-text-justified">
+              <p>
+                By using YOLO-predicted bounding boxes as foveation masks during training, we can
+                also train a model for
+                <em>bounding-box-guided image generation</em>
+                . The bounding-box-guided model successfully generates objects within the foveation
+                boundary. Compared with saliency guidance, bounding boxes explicitly outline object
+                extents, encouraging the model to place entire objects within or aligned to the
+                foveal region, whereas saliency guidance tends to align only the most visually
+                salient parts of objects with the fovea.
+              </p>
+              <p>
+                Please drag the slider below to interactively adjust the foveation mask radius.
+              </p>
+            </div>
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin: 0 auto 1.5rem auto;
+                width: 50vw;
+              "
+            >
+              <div style="display: flex; align-items: center; gap: 0.75rem">
+                <button
+                  id="bbox-prev"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <div>
+                  <div style="display: flex; gap: 1rem">
+                    <div
+                      style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 17vw;
+                      "
+                    >
+                      <p class="is-size-6 has-text-centered col-label">
+                        <strong>Saliency-guided</strong>
+                      </p>
+                      <img
+                        id="saliency-img"
+                        style="width: 100%; display: block; border-radius: 0"
+                        alt=""
+                      />
+                    </div>
+                    <div
+                      style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 17vw;
+                      "
+                    >
+                      <p class="is-size-6 has-text-centered col-label">
+                        <strong>Bounding-box-guided</strong>
+                      </p>
+                      <img
+                        id="bbox-img"
+                        style="width: 100%; display: block; border-radius: 0"
+                        alt=""
+                      />
+                    </div>
+                    <div
+                      style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 17vw;
+                      "
+                    >
+                      <p class="is-size-6 has-text-centered col-label">
+                        <strong>
+                          Tokenization
+                          <br />
+                          (1/2x resolution periphery)
+                        </strong>
+                      </p>
+                      <img
+                        id="bbox-mask-img"
+                        style="width: 100%; display: block; border-radius: 0"
+                        alt=""
+                      />
+                    </div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; align-items: center">
+                    <input
+                      id="bbox-slider"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0"
+                      step="1"
+                      style="width: 70%; margin-top: 0.75rem; cursor: pointer; height: 8px"
+                    />
+                    <p class="is-size-5 has-text-centered" style="color: #888; margin-top: 0.25rem">
+                      Foveation Radius
+                    </p>
+                  </div>
+                </div>
+                <button
+                  id="bbox-next"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 2px solid #363636;
+                    background: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    color: #363636;
+                    flex-shrink: 0;
+                  "
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!--
+  <section class="section fullwidth-gray-bg">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-full-width">
+          <h2 class="title is-3">Overview</h2>
+          <div class="content has-text-centered">
+            <img src="" style="width: 50%;">
+          </div>
+          <div class="content has-text-justified">
+            <p>
+              Content
+            </p>
+          </div>
+          <div class="content has-text-centered">
+            <img src="" style="width: 100%;">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  -->
+
+    <footer class="footer" style="background-color: white">
+      <div class="container">
+        <section class="section" id="BibTeX">
+          <div class="container is-max-desktop content">
+            <h2 class="title">Citation</h2>
+            <pre><code>
+@misc{foveated_diffusion,
+  title={Foveated Diffusion: Efficient Spatially Aware Image and Video Generation},
+  author={Brian Chao and Lior Yariv and Howard Xiao and Gordon Wetzstein},
+  year={2026},
+  eprint={},
+  archivePrefix={},
+  primaryClass={},
+  url={},
+}
+          </code></pre>
+          </div>
+        </section>
+
+        <div class="content has-text-centered">
+          <a class="icon-link" href="">
+            <i class="ai ai-arxiv"></i>
+          </a>
+          <a class="icon-link" href="" class="external-link" disabled>
+            <i class="fab fa-github"></i>
+          </a>
+          <a class="icon-link" href="" class="external-link" disabled>
+            <i class="fab fa-google-drive"></i>
+          </a>
+          <br />
+        </div>
+
+        <div class="columns is-centered">
+          <div class="column is-8">
+            <div class="content">
+              <p>
+                This website is licensed under a
+                <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">
+                  Creative Commons Attribution-ShareAlike 4.0 International License
+                </a>
+                .
+              </p>
+              <p>
+                This means you are free to borrow the
+                <a href="https://github.com/nerfies/nerfies.github.io">source code</a>
+                of this website, we just ask that you link back to this page in the footer. Please
+                remember to remove the analytics code included in the header of the website which
+                you do not want on your website.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
