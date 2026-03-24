@@ -236,7 +236,6 @@ document.addEventListener('DOMContentLoaded', function () {
     ];
     var activeSet720p = 0;
     var standby720p = { index: -1, ready: 0, gen: 0 };
-    var video720pHovered = false;
 
     function baseline720pUrl(folder, idx) {
       return './static/videos/baselines_720p/' + folder + '/' + baseline720pVideoIds[idx] + '.mp4';
@@ -253,10 +252,14 @@ document.addEventListener('DOMContentLoaded', function () {
     function getStandbyEls720p() { return video720pSets[1 - activeSet720p]; }
 
     function revealActiveSet720p() {
+      // Active: in normal flow (determines wrapper height), visible
       video720pSets[activeSet720p].forEach(function (v) {
+        v.style.position = 'static'; v.style.top = ''; v.style.left = '';
         v.style.opacity = '1'; v.style.pointerEvents = 'auto';
       });
+      // Standby: absolutely positioned (out of flow), invisible
       video720pSets[1 - activeSet720p].forEach(function (v) {
+        v.style.position = 'absolute'; v.style.top = '0'; v.style.left = '0';
         v.style.opacity = '0'; v.style.pointerEvents = 'none'; v.pause();
       });
     }
@@ -282,8 +285,8 @@ document.addEventListener('DOMContentLoaded', function () {
       updateBaseline720pPrompt();
       revealActiveSet720p();
       getActiveEls720p().forEach(function (v) {
-        v.loop = true; v.currentTime = 0;
-        if (!video720pHovered) v.play().catch(function () {});
+        v.loop = true;
+        v.play().catch(function () {});
       });
       hideLoading('baseline-720p-loading');
       preloadStandby720p((targetIdx + 1) % baseline720pVideoIds.length);
@@ -326,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function () {
           if (readyCount === 3) {
             revealActiveSet720p();
             hideLoading('baseline-720p-loading');
-            if (!video720pHovered) getActiveEls720p().forEach(function (v2) { v2.play().catch(function () {}); });
+            getActiveEls720p().forEach(function (v2) { v2.play().catch(function () {}); });
             preloadStandby720p(1 % baseline720pVideoIds.length);
           }
         }, { once: true });
@@ -348,11 +351,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var baseline720pColsEl = document.querySelector('.baseline-720p-cols');
     if (baseline720pColsEl) {
       baseline720pColsEl.addEventListener('mouseenter', function () {
-        video720pHovered = true;
         getActiveEls720p().forEach(function (v) { v.pause(); });
       });
       baseline720pColsEl.addEventListener('mouseleave', function () {
-        video720pHovered = false;
         getActiveEls720p().forEach(function (v) { v.play().catch(function () {}); });
       });
     }
@@ -466,7 +467,6 @@ document.addEventListener('DOMContentLoaded', function () {
     ];
     var fovActiveSet = 0;
     var fovStandby = { index: -1, ready: 0, gen: 0 };
-    var fovHovered = false;
 
     function fovVideoUrl(idx, sub) {
       return './static/videos/fov_traj/' + fovTrajIds[idx] + '/' + sub + '.mp4';
@@ -484,9 +484,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function revealFovActiveSet() {
       fovVideoSets[fovActiveSet].forEach(function (v) {
+        v.style.position = 'static'; v.style.top = ''; v.style.left = '';
         v.style.opacity = '1'; v.style.pointerEvents = 'auto';
       });
       fovVideoSets[1 - fovActiveSet].forEach(function (v) {
+        v.style.position = 'absolute'; v.style.top = '0'; v.style.left = '0';
         v.style.opacity = '0'; v.style.pointerEvents = 'none'; v.pause();
       });
     }
@@ -512,8 +514,8 @@ document.addEventListener('DOMContentLoaded', function () {
       updateFovPrompt();
       revealFovActiveSet();
       getFovActiveEls().forEach(function (v) {
-        v.loop = true; v.currentTime = 0;
-        if (!fovHovered) v.play().catch(function () {});
+        v.loop = true;
+        v.play().catch(function () {});
       });
       hideLoading('fov-traj-video-loading');
       preloadFovStandby((targetIdx + 1) % fovTrajIds.length);
@@ -553,7 +555,7 @@ document.addEventListener('DOMContentLoaded', function () {
           if (readyCount === 3) {
             revealFovActiveSet();
             hideLoading('fov-traj-video-loading');
-            if (!fovHovered) getFovActiveEls().forEach(function (v2) { v2.play().catch(function () {}); });
+            getFovActiveEls().forEach(function (v2) { v2.play().catch(function () {}); });
             preloadFovStandby(1 % fovTrajIds.length);
           }
         }, { once: true });
@@ -574,11 +576,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (fovContainer) {
       fovContainer.addEventListener('mouseenter', function () {
-        fovHovered = true;
         getFovActiveEls().forEach(function (v) { v.pause(); });
       });
       fovContainer.addEventListener('mouseleave', function () {
-        fovHovered = false;
         getFovActiveEls().forEach(function (v) { v.play().catch(function () {}); });
       });
     }
