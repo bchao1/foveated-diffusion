@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var baselineImgNextBtn = document.getElementById('baseline-img-next');
   var baselineImgPromptEl = document.getElementById('baseline-img-prompt');
   var baselineImgPrompts = {};
-  var baselineImgFiles = ['img_high_res.png', 'img_naive.png', 'img_ours.png'];
+  var baselineImgFiles = ['img_high_res.jpg', 'img_naive.jpg', 'img_ours.jpg'];
   var baselineImgEls = [baselineImgHrEl, baselineImgNaiveEl, baselineImgOursEl];
 
   loadOrderedCSV('./static/files/prompts/image_baseline_prompts.csv').then(function (map) {
@@ -527,8 +527,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var urls = [];
     for (var c = 0; c < 100; c++) {
       var padded = String(c).padStart(4, '0');
-      urls.push('./static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.png');
-      urls.push('./static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
+      urls.push('./static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.jpg');
+      urls.push('./static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.jpg');
     }
     return urls;
   }
@@ -541,8 +541,8 @@ document.addEventListener('DOMContentLoaded', function () {
       fovTrajLastCell = cellIdx;
       var id = fovTrajImgIds[fovTrajImgIndex];
       var padded = String(cellIdx).padStart(4, '0');
-      setImageFromCache(fovTrajImg2x, './static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.png');
-      setImageFromCache(fovTrajMask2x, './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
+      setImageFromCache(fovTrajImg2x, './static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.jpg');
+      setImageFromCache(fovTrajMask2x, './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.jpg');
     }
 
     function preloadFovTrajSample(idx, onDone, onProgress) {
@@ -553,8 +553,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function eagerLoadFovTrajDefault() {
       var id = fovTrajImgIds[fovTrajImgIndex];
       var padded = String(44).padStart(4, '0');
-      fovTrajImg2x.src = './static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.png';
-      fovTrajMask2x.src = './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png';
+      fovTrajImg2x.src = './static/images/fov_traj_grid_10x10_2x/random/' + id + '/img_' + padded + '.jpg';
+      fovTrajMask2x.src = './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.jpg';
     }
 
     function preloadFovTrajCurrent() {
@@ -636,7 +636,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var probe = new Image();
       probe.onload = function () { found.push(index); probeImages(folder, index + 1, found, onDone); };
       probe.onerror = function () { onDone(found); };
-      probe.src = folder + 'img_' + padded + '.png';
+      probe.src = folder + 'img_' + padded + '.jpg';
     }
 
     function preloadVaryRadiusSample(sampleIdx, count, onDone, onProgress) {
@@ -647,9 +647,9 @@ document.addEventListener('DOMContentLoaded', function () {
       var urls = [];
       for (var i = 0; i < count; i++) {
         var padded = String(i).padStart(4, '0');
-        urls.push(bboxFolder + 'img_' + padded + '.png');
-        urls.push(saliencyFolder + 'img_' + padded + '.png');
-        urls.push(maskFolder + 'tokenization_mask_' + padded + '.png');
+        urls.push(bboxFolder + 'img_' + padded + '.jpg');
+        urls.push(saliencyFolder + 'img_' + padded + '.jpg');
+        urls.push(maskFolder + 'tokenization_mask_' + padded + '.jpg');
       }
       preloadBatch(urls, 6, onDone, onProgress);
     }
@@ -660,9 +660,9 @@ document.addEventListener('DOMContentLoaded', function () {
       bboxReady = false;
       varySlider.disabled = true;
       // Eagerly show first image behind the spinner
-      bboxImgEl.src = folders.bbox + 'img_0000.png';
-      saliencyImgEl.src = folders.saliency + 'img_0000.png';
-      bboxMaskImgEl.src = folders.mask + 'tokenization_mask_0000.png';
+      bboxImgEl.src = folders.bbox + 'img_0000.jpg';
+      saliencyImgEl.src = folders.saliency + 'img_0000.jpg';
+      bboxMaskImgEl.src = folders.mask + 'tokenization_mask_0000.jpg';
       probeImages(folders.bbox, 0, [], function (ids) {
         if (ids.length === 0) return;
         varySlider.min = 0;
@@ -671,9 +671,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         function loadVaryImg(idx) {
           var padded = String(ids[idx]).padStart(4, '0');
-          setImageFromCache(bboxImgEl, folders.bbox + 'img_' + padded + '.png');
-          setImageFromCache(saliencyImgEl, folders.saliency + 'img_' + padded + '.png');
-          setImageFromCache(bboxMaskImgEl, folders.mask + 'tokenization_mask_' + padded + '.png');
+          setImageFromCache(bboxImgEl, folders.bbox + 'img_' + padded + '.jpg');
+          setImageFromCache(saliencyImgEl, folders.saliency + 'img_' + padded + '.jpg');
+          setImageFromCache(bboxMaskImgEl, folders.mask + 'tokenization_mask_' + padded + '.jpg');
         }
 
         preloadVaryRadiusSample(varyRadiusIndex, ids.length, function () {
@@ -733,36 +733,36 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!teaserReady || cellIdx === teaserLastCell) return;
       teaserLastCell = cellIdx;
       var padded = String(cellIdx).padStart(4, '0');
-      setImageFromCache(teaserImg1x, './static/images/fov_traj_grid_10x10_1x/random/006/img_0000.png');
-      setImageFromCache(teaserMask1x, './static/images/tokenization_masks_1x/tokenization_mask_0000.png');
-      setImageFromCache(teaserImg2x, './static/images/fov_traj_grid_10x10_2x/random/006/img_' + padded + '.png');
-      setImageFromCache(teaserMask2x, './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
-      setImageFromCache(teaserImg4x, './static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + padded + '.png');
-      setImageFromCache(teaserMask4x, './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + padded + '.png');
+      setImageFromCache(teaserImg1x, './static/images/fov_traj_grid_10x10_1x/random/006/img_0000.jpg');
+      setImageFromCache(teaserMask1x, './static/images/tokenization_masks_1x/tokenization_mask_0000.jpg');
+      setImageFromCache(teaserImg2x, './static/images/fov_traj_grid_10x10_2x/random/006/img_' + padded + '.jpg');
+      setImageFromCache(teaserMask2x, './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.jpg');
+      setImageFromCache(teaserImg4x, './static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + padded + '.jpg');
+      setImageFromCache(teaserMask4x, './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + padded + '.jpg');
     }
 
     // Eagerly show center cell (44) behind the spinner
     (function () {
       var p = String(44).padStart(4, '0');
-      teaserImg1x.src = './static/images/fov_traj_grid_10x10_1x/random/006/img_0000.png';
-      teaserMask1x.src = './static/images/tokenization_masks_1x/tokenization_mask_0000.png';
-      teaserImg2x.src = './static/images/fov_traj_grid_10x10_2x/random/006/img_' + p + '.png';
-      teaserMask2x.src = './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + p + '.png';
-      teaserImg4x.src = './static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + p + '.png';
-      teaserMask4x.src = './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + p + '.png';
+      teaserImg1x.src = './static/images/fov_traj_grid_10x10_1x/random/006/img_0000.jpg';
+      teaserMask1x.src = './static/images/tokenization_masks_1x/tokenization_mask_0000.jpg';
+      teaserImg2x.src = './static/images/fov_traj_grid_10x10_2x/random/006/img_' + p + '.jpg';
+      teaserMask2x.src = './static/images/tokenization_masks_10x10_2x/tokenization_mask_' + p + '.jpg';
+      teaserImg4x.src = './static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + p + '.jpg';
+      teaserMask4x.src = './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + p + '.jpg';
     })();
 
     showLoading('teaser-loading', 'teaser-demo');
     (function () {
       var allUrls = [];
-      allUrls.push('./static/images/fov_traj_grid_10x10_1x/random/006/img_0000.png');
-      allUrls.push('./static/images/tokenization_masks_1x/tokenization_mask_0000.png');
+      allUrls.push('./static/images/fov_traj_grid_10x10_1x/random/006/img_0000.jpg');
+      allUrls.push('./static/images/tokenization_masks_1x/tokenization_mask_0000.jpg');
       for (var c = 0; c < 100; c++) {
         var padded = String(c).padStart(4, '0');
-        allUrls.push('./static/images/fov_traj_grid_10x10_2x/random/006/img_' + padded + '.png');
-        allUrls.push('./static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
-        allUrls.push('./static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + padded + '.png');
-        allUrls.push('./static/images/tokenization_masks_10x10_4x/tokenization_mask_' + padded + '.png');
+        allUrls.push('./static/images/fov_traj_grid_10x10_2x/random/006/img_' + padded + '.jpg');
+        allUrls.push('./static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.jpg');
+        allUrls.push('./static/images/fov_traj_grid_10x10_4x/random_4x_distill/006/img_' + padded + '.jpg');
+        allUrls.push('./static/images/tokenization_masks_10x10_4x/tokenization_mask_' + padded + '.jpg');
       }
       preloadBatch(allUrls, 12, function () {
         teaserReady = true;
@@ -807,9 +807,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var urls = [];
     for (var c = 0; c < 100; c++) {
       var padded = String(c).padStart(4, '0');
-      urls.push('./static/images/vary_position_grid_10x10/random/' + id + '/img_' + padded + '.png');
-      urls.push('./static/images/vary_position_grid_10x10/saliency/' + id + '/img_' + padded + '.png');
-      urls.push('./static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.png');
+      urls.push('./static/images/vary_position_grid_10x10/random/' + id + '/img_' + padded + '.jpg');
+      urls.push('./static/images/vary_position_grid_10x10/saliency/' + id + '/img_' + padded + '.jpg');
+      urls.push('./static/images/tokenization_masks_10x10_2x/tokenization_mask_' + padded + '.jpg');
     }
     return urls;
   }
@@ -831,9 +831,9 @@ document.addEventListener('DOMContentLoaded', function () {
       saliencyLastCell = cellIdx;
       var paths = saliencyGridBasePaths();
       var padded = String(cellIdx).padStart(4, '0');
-      setImageFromCache(saliencyGridRandomImg, paths.random + 'img_' + padded + '.png');
-      setImageFromCache(saliencyGridSaliencyImg, paths.saliency + 'img_' + padded + '.png');
-      setImageFromCache(saliencyGridMaskImg, paths.mask + 'tokenization_mask_' + padded + '.png');
+      setImageFromCache(saliencyGridRandomImg, paths.random + 'img_' + padded + '.jpg');
+      setImageFromCache(saliencyGridSaliencyImg, paths.saliency + 'img_' + padded + '.jpg');
+      setImageFromCache(saliencyGridMaskImg, paths.mask + 'tokenization_mask_' + padded + '.jpg');
     }
 
     function preloadSaliencySample(idx, onDone, onProgress) {
@@ -844,9 +844,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function eagerLoadSaliencyDefault() {
       var paths = saliencyGridBasePaths();
       var padded = String(12).padStart(4, '0');
-      saliencyGridRandomImg.src = paths.random + 'img_' + padded + '.png';
-      saliencyGridSaliencyImg.src = paths.saliency + 'img_' + padded + '.png';
-      saliencyGridMaskImg.src = paths.mask + 'tokenization_mask_' + padded + '.png';
+      saliencyGridRandomImg.src = paths.random + 'img_' + padded + '.jpg';
+      saliencyGridSaliencyImg.src = paths.saliency + 'img_' + padded + '.jpg';
+      saliencyGridMaskImg.src = paths.mask + 'tokenization_mask_' + padded + '.jpg';
     }
 
     function preloadSaliencyCurrent() {
