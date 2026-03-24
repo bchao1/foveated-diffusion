@@ -1,4 +1,9 @@
 description.md
 download_data.sh
-static/images/**/*.png
 static/images_png/
+
+# Ignore all PNGs in images/ except tokenization masks
+static/images/baselines/**/*.png
+static/images/fov_traj_grid_*/**/*.png
+static/images/vary_position_grid_*/**/*.png
+static/images/vary_radius_new/**/*.png
