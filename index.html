@@ -722,15 +722,40 @@
                 >
                   <i class="fas fa-chevron-left"></i>
                 </button>
-                <div style="flex: 1; min-width: 0">
-                  <video
-                    id="fov-traj-video"
-                    autoplay
-                    muted
-                    loop
-                    playsinline
-                    style="width: 100%; display: block; border-radius: 0"
-                  ></video>
+                <div class="fov-traj-video-cols" style="flex: 1; min-width: 0; display: flex; gap: 0.5rem;">
+                  <div style="flex: 1; min-width: 0;">
+                    <p class="is-size-6 has-text-centered" style="margin-bottom: 0.5rem;">Trajectory 1</p>
+                    <video
+                      id="fov-traj-video-0"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                  </div>
+                  <div style="flex: 1; min-width: 0;">
+                    <p class="is-size-6 has-text-centered" style="margin-bottom: 0.5rem;">Trajectory 2</p>
+                    <video
+                      id="fov-traj-video-1"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                  </div>
+                  <div style="flex: 1; min-width: 0;">
+                    <p class="is-size-6 has-text-centered" style="margin-bottom: 0.5rem;">Trajectory 3</p>
+                    <video
+                      id="fov-traj-video-2"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                  </div>
                 </div>
                 <button
                   id="fov-traj-next"

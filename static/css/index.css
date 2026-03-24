@@ -384,6 +384,16 @@ body {
     width: 100% !important;
   }
 
+  /* --- Fov trajectory videos: 3-col → vertical stack --- */
+  .fov-traj-video-cols {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  .fov-traj-video-cols > div {
+    flex: none !important;
+    width: 100% !important;
+  }
+
   /* --- Baseline 720p: 3-col videos → vertical stack --- */
   .baseline-720p-cols {
     flex-direction: column !important;

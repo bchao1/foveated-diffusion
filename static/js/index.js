@@ -386,23 +386,28 @@ document.addEventListener('DOMContentLoaded', function () {
   // ---------------------------------------------------------------------------
 
   var fovTrajIds = [153, 157, 176, 180, 184, 228, 234, 275, 388, 432, 463, 471, 125, 133, 138];
-  var fovVideo = document.getElementById('fov-traj-video');
+  var fovVideoEls = [
+    document.getElementById('fov-traj-video-0'),
+    document.getElementById('fov-traj-video-1'),
+    document.getElementById('fov-traj-video-2')
+  ];
   var fovPrev = document.getElementById('fov-traj-prev');
   var fovNext = document.getElementById('fov-traj-next');
   var fovContainer = document.getElementById('fov-traj-video-container');
   var fovPromptEl = document.getElementById('fov-traj-prompt');
   var fovPrompts = {};
+  var fovSubIds = ['000', '001', '002'];
 
   loadCSV('./static/files/prompts/claude_prompts_new_v2_en.csv').then(function (map) {
     fovPrompts = map;
     updateFovPrompt();
   });
 
-  if (fovVideo && fovTrajIds.length > 0) {
+  if (fovVideoEls[0] && fovTrajIds.length > 0) {
     var fovIdx = 0;
 
-    function fovVideoUrl(idx) {
-      return './static/videos/fov_traj/' + fovTrajIds[idx] + '.mp4';
+    function fovVideoUrl(idx, sub) {
+      return './static/videos/fov_traj/' + fovTrajIds[idx] + '/' + sub + '.mp4';
     }
 
     function updateFovPrompt() {
@@ -415,22 +420,32 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadFovVideo(index) {
       fovIdx = index;
       showLoading('fov-traj-video-loading', 'fov-traj-video-container');
-      var url = fovVideoUrl(index);
-      fovVideo.src = url;
-      fovVideo.load();
-      updateFovPrompt();
+      var readyCount = 0;
 
-      function onReady() {
-        fovVideo.removeEventListener('canplaythrough', onReady);
-        hideLoading('fov-traj-video-loading');
-        fovVideo.play().catch(function () {});
-        // Preload neighbors
-        var nextIdx = (index + 1) % fovTrajIds.length;
-        var prevIdx = (index - 1 + fovTrajIds.length) % fovTrajIds.length;
-        preloadVideo(fovVideoUrl(nextIdx), function () {});
-        preloadVideo(fovVideoUrl(prevIdx), function () {});
-      }
-      fovVideo.addEventListener('canplaythrough', onReady, { once: true });
+      fovSubIds.forEach(function (sub, i) {
+        var el = fovVideoEls[i];
+        var url = fovVideoUrl(index, sub);
+        el.src = url;
+        el.load();
+
+        function onReady() {
+          el.removeEventListener('canplaythrough', onReady);
+          readyCount++;
+          if (readyCount === 3) {
+            hideLoading('fov-traj-video-loading');
+            fovVideoEls.forEach(function (v) { v.play().catch(function () {}); });
+            // Preload neighbors
+            var nextIdx = (index + 1) % fovTrajIds.length;
+            var prevIdx = (index - 1 + fovTrajIds.length) % fovTrajIds.length;
+            fovSubIds.forEach(function (s) {
+              preloadVideo(fovVideoUrl(nextIdx, s), function () {});
+              preloadVideo(fovVideoUrl(prevIdx, s), function () {});
+            });
+          }
+        }
+        el.addEventListener('canplaythrough', onReady, { once: true });
+      });
+      updateFovPrompt();
     }
 
     loadFovVideo(0);
@@ -447,8 +462,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (fovContainer) {
-      fovContainer.addEventListener('mouseenter', function () { fovVideo.pause(); });
-      fovContainer.addEventListener('mouseleave', function () { fovVideo.play().catch(function () {}); });
+      fovContainer.addEventListener('mouseenter', function () {
+        fovVideoEls.forEach(function (v) { v.pause(); });
+      });
+      fovContainer.addEventListener('mouseleave', function () {
+        fovVideoEls.forEach(function (v) { v.play().catch(function () {}); });
+      });
     }
   }
 
