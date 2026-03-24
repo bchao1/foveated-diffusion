@@ -188,21 +188,7 @@ function updateProgress(id, loaded, total) {
   }
 }
 
-// Preload a video URL: resolves when canplaythrough fires
-function preloadVideo(url, onDone) {
-  var video = document.createElement('video');
-  video.preload = 'auto';
-  video.muted = true;
-  function done() {
-    video.oncanplaythrough = null;
-    video.onerror = null;
-    if (onDone) { onDone(); onDone = null; }
-  }
-  video.oncanplaythrough = done;
-  video.onerror = done;
-  video.src = url;
-  video.load();
-}
+// (Video preloading is handled via double-buffering in each slider below)
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -238,8 +224,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (video720pHrEl && baseline720pVideoIds.length > 0) {
     var currentIndex720p = 0;
-    var video720pEls = [video720pHrEl, video720pNaiveEl, video720pOursEl];
     var video720pFolders = ['high_res', 'naive', 'ours'];
+    // Two sets: active (visible) and standby (hidden, preloading next)
+    var video720pSets = [
+      [video720pHrEl, video720pNaiveEl, video720pOursEl],
+      [
+        document.getElementById('baseline-720p-video-hr-b'),
+        document.getElementById('baseline-720p-video-naive-b'),
+        document.getElementById('baseline-720p-video-ours-b')
+      ]
+    ];
+    var activeSet720p = 0;
+    var standby720p = { index: -1, ready: 0, gen: 0 };
+    var video720pHovered = false;
 
     function baseline720pUrl(folder, idx) {
       return './static/videos/baselines_720p/' + folder + '/' + baseline720pVideoIds[idx] + '.mp4';
@@ -252,57 +249,111 @@ document.addEventListener('DOMContentLoaded', function () {
       baseline720pPromptEl.textContent = prompt ? '[' + fileId + '] ' + prompt : '';
     }
 
-    function loadVideo720p(index) {
-      currentIndex720p = index;
-      showLoading('baseline-720p-loading', 'baseline-720p-container');
-      var readyCount = 0;
+    function getActiveEls720p() { return video720pSets[activeSet720p]; }
+    function getStandbyEls720p() { return video720pSets[1 - activeSet720p]; }
 
-      video720pFolders.forEach(function (folder, i) {
-        var el = video720pEls[i];
-        var url = baseline720pUrl(folder, index);
-        el.src = url;
-        el.load();
-
-        function onReady() {
-          el.removeEventListener('canplaythrough', onReady);
-          readyCount++;
-          if (readyCount === 3) {
-            hideLoading('baseline-720p-loading');
-            video720pEls.forEach(function (v) { v.play().catch(function () {}); });
-            // Preload neighbors
-            var nextIdx = (index + 1) % baseline720pVideoIds.length;
-            var prevIdx = (index - 1 + baseline720pVideoIds.length) % baseline720pVideoIds.length;
-            video720pFolders.forEach(function (f) {
-              preloadVideo(baseline720pUrl(f, nextIdx), function () {});
-              preloadVideo(baseline720pUrl(f, prevIdx), function () {});
-            });
-          }
-        }
-        el.addEventListener('canplaythrough', onReady, { once: true });
+    function revealActiveSet720p() {
+      video720pSets[activeSet720p].forEach(function (v) {
+        v.style.opacity = '1'; v.style.pointerEvents = 'auto';
       });
-      updateBaseline720pPrompt();
+      video720pSets[1 - activeSet720p].forEach(function (v) {
+        v.style.opacity = '0'; v.style.pointerEvents = 'none'; v.pause();
+      });
     }
 
-    loadVideo720p(0);
+    function preloadStandby720p(targetIdx) {
+      var gen = ++standby720p.gen;
+      standby720p.index = targetIdx;
+      standby720p.ready = 0;
+      var stbEls = getStandbyEls720p();
+      video720pFolders.forEach(function (folder, i) {
+        var el = stbEls[i];
+        el.src = baseline720pUrl(folder, targetIdx);
+        el.load();
+        el.addEventListener('canplaythrough', function () {
+          if (standby720p.gen === gen) standby720p.ready++;
+        }, { once: true });
+      });
+    }
+
+    function doSwap720p(targetIdx) {
+      activeSet720p = 1 - activeSet720p;
+      currentIndex720p = targetIdx;
+      updateBaseline720pPrompt();
+      revealActiveSet720p();
+      getActiveEls720p().forEach(function (v) {
+        v.loop = true; v.currentTime = 0;
+        if (!video720pHovered) v.play().catch(function () {});
+      });
+      hideLoading('baseline-720p-loading');
+      preloadStandby720p((targetIdx + 1) % baseline720pVideoIds.length);
+    }
+
+    function navigateTo720p(targetIdx) {
+      // Instant swap if standby already buffered this index
+      if (standby720p.index === targetIdx && standby720p.ready >= 3) {
+        doSwap720p(targetIdx);
+        return;
+      }
+      // Load into standby — active keeps playing while we wait
+      showLoading('baseline-720p-loading', 'baseline-720p-container');
+      var gen = ++standby720p.gen;
+      standby720p.index = targetIdx;
+      standby720p.ready = 0;
+      var stbEls = getStandbyEls720p();
+      video720pFolders.forEach(function (folder, i) {
+        var el = stbEls[i];
+        el.src = baseline720pUrl(folder, targetIdx);
+        el.load();
+        el.addEventListener('canplaythrough', function () {
+          if (standby720p.gen !== gen) return;
+          standby720p.ready++;
+          if (standby720p.ready >= 3) doSwap720p(targetIdx);
+        }, { once: true });
+      });
+    }
+
+    // Initial load directly into active set
+    (function () {
+      showLoading('baseline-720p-loading', 'baseline-720p-container');
+      var readyCount = 0;
+      getActiveEls720p().forEach(function (v, i) {
+        v.src = baseline720pUrl(video720pFolders[i], 0);
+        v.loop = true;
+        v.load();
+        v.addEventListener('canplaythrough', function () {
+          readyCount++;
+          if (readyCount === 3) {
+            revealActiveSet720p();
+            hideLoading('baseline-720p-loading');
+            if (!video720pHovered) getActiveEls720p().forEach(function (v2) { v2.play().catch(function () {}); });
+            preloadStandby720p(1 % baseline720pVideoIds.length);
+          }
+        }, { once: true });
+      });
+      updateBaseline720pPrompt();
+    }());
 
     if (prev720pBtn) {
       prev720pBtn.addEventListener('click', function () {
-        loadVideo720p((currentIndex720p - 1 + baseline720pVideoIds.length) % baseline720pVideoIds.length);
+        navigateTo720p((currentIndex720p - 1 + baseline720pVideoIds.length) % baseline720pVideoIds.length);
       });
     }
     if (next720pBtn) {
       next720pBtn.addEventListener('click', function () {
-        loadVideo720p((currentIndex720p + 1) % baseline720pVideoIds.length);
+        navigateTo720p((currentIndex720p + 1) % baseline720pVideoIds.length);
       });
     }
 
     var baseline720pColsEl = document.querySelector('.baseline-720p-cols');
     if (baseline720pColsEl) {
       baseline720pColsEl.addEventListener('mouseenter', function () {
-        video720pEls.forEach(function (v) { v.pause(); });
+        video720pHovered = true;
+        getActiveEls720p().forEach(function (v) { v.pause(); });
       });
       baseline720pColsEl.addEventListener('mouseleave', function () {
-        video720pEls.forEach(function (v) { v.play().catch(function () {}); });
+        video720pHovered = false;
+        getActiveEls720p().forEach(function (v) { v.play().catch(function () {}); });
       });
     }
   }
@@ -405,6 +456,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (fovVideoEls[0] && fovTrajIds.length > 0) {
     var fovIdx = 0;
+    var fovVideoSets = [
+      fovVideoEls,
+      [
+        document.getElementById('fov-traj-video-0-b'),
+        document.getElementById('fov-traj-video-1-b'),
+        document.getElementById('fov-traj-video-2-b')
+      ]
+    ];
+    var fovActiveSet = 0;
+    var fovStandby = { index: -1, ready: 0, gen: 0 };
+    var fovHovered = false;
 
     function fovVideoUrl(idx, sub) {
       return './static/videos/fov_traj/' + fovTrajIds[idx] + '/' + sub + '.mp4';
@@ -417,56 +479,107 @@ document.addEventListener('DOMContentLoaded', function () {
       fovPromptEl.textContent = prompt ? '[' + fileId + '] ' + prompt : '';
     }
 
-    function loadFovVideo(index) {
-      fovIdx = index;
-      showLoading('fov-traj-video-loading', 'fov-traj-video-container');
-      var readyCount = 0;
+    function getFovActiveEls() { return fovVideoSets[fovActiveSet]; }
+    function getFovStandbyEls() { return fovVideoSets[1 - fovActiveSet]; }
 
-      fovSubIds.forEach(function (sub, i) {
-        var el = fovVideoEls[i];
-        var url = fovVideoUrl(index, sub);
-        el.src = url;
-        el.load();
-
-        function onReady() {
-          el.removeEventListener('canplaythrough', onReady);
-          readyCount++;
-          if (readyCount === 3) {
-            hideLoading('fov-traj-video-loading');
-            fovVideoEls.forEach(function (v) { v.play().catch(function () {}); });
-            // Preload neighbors
-            var nextIdx = (index + 1) % fovTrajIds.length;
-            var prevIdx = (index - 1 + fovTrajIds.length) % fovTrajIds.length;
-            fovSubIds.forEach(function (s) {
-              preloadVideo(fovVideoUrl(nextIdx, s), function () {});
-              preloadVideo(fovVideoUrl(prevIdx, s), function () {});
-            });
-          }
-        }
-        el.addEventListener('canplaythrough', onReady, { once: true });
+    function revealFovActiveSet() {
+      fovVideoSets[fovActiveSet].forEach(function (v) {
+        v.style.opacity = '1'; v.style.pointerEvents = 'auto';
       });
-      updateFovPrompt();
+      fovVideoSets[1 - fovActiveSet].forEach(function (v) {
+        v.style.opacity = '0'; v.style.pointerEvents = 'none'; v.pause();
+      });
     }
 
-    loadFovVideo(0);
+    function preloadFovStandby(targetIdx) {
+      var gen = ++fovStandby.gen;
+      fovStandby.index = targetIdx;
+      fovStandby.ready = 0;
+      var stbEls = getFovStandbyEls();
+      fovSubIds.forEach(function (sub, i) {
+        var el = stbEls[i];
+        el.src = fovVideoUrl(targetIdx, sub);
+        el.load();
+        el.addEventListener('canplaythrough', function () {
+          if (fovStandby.gen === gen) fovStandby.ready++;
+        }, { once: true });
+      });
+    }
+
+    function doFovSwap(targetIdx) {
+      fovActiveSet = 1 - fovActiveSet;
+      fovIdx = targetIdx;
+      updateFovPrompt();
+      revealFovActiveSet();
+      getFovActiveEls().forEach(function (v) {
+        v.loop = true; v.currentTime = 0;
+        if (!fovHovered) v.play().catch(function () {});
+      });
+      hideLoading('fov-traj-video-loading');
+      preloadFovStandby((targetIdx + 1) % fovTrajIds.length);
+    }
+
+    function navigateToFov(targetIdx) {
+      if (fovStandby.index === targetIdx && fovStandby.ready >= 3) {
+        doFovSwap(targetIdx);
+        return;
+      }
+      showLoading('fov-traj-video-loading', 'fov-traj-video-container');
+      var gen = ++fovStandby.gen;
+      fovStandby.index = targetIdx;
+      fovStandby.ready = 0;
+      var stbEls = getFovStandbyEls();
+      fovSubIds.forEach(function (sub, i) {
+        var el = stbEls[i];
+        el.src = fovVideoUrl(targetIdx, sub);
+        el.load();
+        el.addEventListener('canplaythrough', function () {
+          if (fovStandby.gen !== gen) return;
+          fovStandby.ready++;
+          if (fovStandby.ready >= 3) doFovSwap(targetIdx);
+        }, { once: true });
+      });
+    }
+
+    (function () {
+      showLoading('fov-traj-video-loading', 'fov-traj-video-container');
+      var readyCount = 0;
+      getFovActiveEls().forEach(function (v, i) {
+        v.src = fovVideoUrl(0, fovSubIds[i]);
+        v.loop = true;
+        v.load();
+        v.addEventListener('canplaythrough', function () {
+          readyCount++;
+          if (readyCount === 3) {
+            revealFovActiveSet();
+            hideLoading('fov-traj-video-loading');
+            if (!fovHovered) getFovActiveEls().forEach(function (v2) { v2.play().catch(function () {}); });
+            preloadFovStandby(1 % fovTrajIds.length);
+          }
+        }, { once: true });
+      });
+      updateFovPrompt();
+    }());
 
     if (fovPrev) {
       fovPrev.addEventListener('click', function () {
-        loadFovVideo((fovIdx - 1 + fovTrajIds.length) % fovTrajIds.length);
+        navigateToFov((fovIdx - 1 + fovTrajIds.length) % fovTrajIds.length);
       });
     }
     if (fovNext) {
       fovNext.addEventListener('click', function () {
-        loadFovVideo((fovIdx + 1) % fovTrajIds.length);
+        navigateToFov((fovIdx + 1) % fovTrajIds.length);
       });
     }
 
     if (fovContainer) {
       fovContainer.addEventListener('mouseenter', function () {
-        fovVideoEls.forEach(function (v) { v.pause(); });
+        fovHovered = true;
+        getFovActiveEls().forEach(function (v) { v.pause(); });
       });
       fovContainer.addEventListener('mouseleave', function () {
-        fovVideoEls.forEach(function (v) { v.play().catch(function () {}); });
+        fovHovered = false;
+        getFovActiveEls().forEach(function (v) { v.play().catch(function () {}); });
       });
     }
   }
