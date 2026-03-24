@@ -119,13 +119,13 @@ function setImageFromCache(imgEl, url) {
 }
 
 // ---------------------------------------------------------------------------
-// Cursor-following loading blob
+// Per-demo cursor-following loading blob
 // ---------------------------------------------------------------------------
 var loadingCursor = null;
 var loadingCursorFill = null;
 var loadingCursorText = null;
-// Track which demos are currently loading
-var activeLoadingDemos = {};
+var activeLoadingDemos = {}; // id -> { pct, containerEl }
+var hoveredDemoId = null;
 
 function initLoadingCursor() {
   loadingCursor = document.getElementById('loading-cursor');
@@ -133,45 +133,58 @@ function initLoadingCursor() {
     loadingCursorFill = loadingCursor.querySelector('.progress-fill');
     loadingCursorText = loadingCursor.querySelector('.progress-text');
   }
-  // Follow mouse globally
   document.addEventListener('mousemove', function (e) {
-    if (loadingCursor && loadingCursor.style.display === 'flex') {
-      loadingCursor.style.left = e.clientX + 'px';
-      loadingCursor.style.top = e.clientY + 'px';
+    if (!loadingCursor) return;
+    // Always update position
+    loadingCursor.style.left = e.clientX + 'px';
+    loadingCursor.style.top = e.clientY + 'px';
+    // Check if cursor is over any loading demo container
+    var found = null;
+    for (var id in activeLoadingDemos) {
+      var info = activeLoadingDemos[id];
+      if (info.containerEl) {
+        var rect = info.containerEl.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right &&
+            e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          found = id;
+          break;
+        }
+      }
+    }
+    hoveredDemoId = found;
+    if (found) {
+      loadingCursor.style.display = 'flex';
+      var pct = activeLoadingDemos[found].pct;
+      if (loadingCursorFill) loadingCursorFill.style.width = pct + '%';
+      if (loadingCursorText) loadingCursorText.textContent = pct + '%';
+    } else {
+      loadingCursor.style.display = 'none';
     }
   });
 }
 
-function showLoading(id) {
-  activeLoadingDemos[id] = { pct: 0 };
-  updateLoadingCursorVisibility();
+// containerElOrId: the DOM element or element ID of the demo's container
+function showLoading(id, containerElOrId) {
+  var el = typeof containerElOrId === 'string' ? document.getElementById(containerElOrId) : containerElOrId;
+  activeLoadingDemos[id] = { pct: 0, containerEl: el || null };
 }
 
 function hideLoading(id) {
   delete activeLoadingDemos[id];
-  updateLoadingCursorVisibility();
+  // If cursor was over this demo, hide blob
+  if (hoveredDemoId === id) {
+    hoveredDemoId = null;
+    if (loadingCursor) loadingCursor.style.display = 'none';
+  }
 }
 
 function updateProgress(id, loaded, total) {
   var pct = Math.round(loaded / total * 100);
   if (activeLoadingDemos[id]) activeLoadingDemos[id].pct = pct;
-  // Show the progress of whichever demo the user is near (use highest pct active)
-  var maxPct = 0;
-  for (var key in activeLoadingDemos) {
-    if (activeLoadingDemos[key].pct > maxPct) maxPct = activeLoadingDemos[key].pct;
-  }
-  if (loadingCursorFill) loadingCursorFill.style.width = pct + '%';
-  if (loadingCursorText) loadingCursorText.textContent = pct + '%';
-}
-
-function updateLoadingCursorVisibility() {
-  if (!loadingCursor) return;
-  var anyActive = false;
-  for (var key in activeLoadingDemos) { anyActive = true; break; }
-  loadingCursor.style.display = anyActive ? 'flex' : 'none';
-  if (!anyActive) {
-    if (loadingCursorFill) loadingCursorFill.style.width = '0%';
-    if (loadingCursorText) loadingCursorText.textContent = '0%';
+  // Only update the visible blob if this is the hovered demo
+  if (hoveredDemoId === id) {
+    if (loadingCursorFill) loadingCursorFill.style.width = pct + '%';
+    if (loadingCursorText) loadingCursorText.textContent = pct + '%';
   }
 }
 
@@ -237,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadVideo720p(index) {
       currentIndex720p = index;
-      showLoading('baseline-720p-loading');
+      showLoading('baseline-720p-loading', 'baseline-720p-container');
       var url = baseline720pUrl(index);
       video720pEl.src = url;
       video720pEl.load();
@@ -314,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Preload all baseline images (only 6, small) then show
-    showLoading('baseline-img-loading');
+    showLoading('baseline-img-loading', 'baseline-img-container');
     preloadBatch(baselineImgUrls(), 6, function () {
       hideLoading('baseline-img-loading');
       loadBaselineImg(0);
@@ -367,7 +380,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadFovVideo(index) {
       fovIdx = index;
-      showLoading('fov-traj-video-loading');
+      showLoading('fov-traj-video-loading', 'fov-traj-video-container');
       var url = fovVideoUrl(index);
       fovVideo.src = url;
       fovVideo.load();
@@ -492,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function preloadFovTrajCurrent() {
-      showLoading('fov-traj-img-loading');
+      showLoading('fov-traj-img-loading', 'fov-traj-img-demo');
       fovTrajReady = false;
       eagerLoadFovTrajDefault();
       preloadFovTrajSample(fovTrajImgIndex, function () {
@@ -590,7 +603,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadVaryRadius() {
       var folders = varyRadiusFolders();
-      showLoading('bbox-loading');
+      showLoading('bbox-loading', 'bbox-demo');
       bboxReady = false;
       varySlider.disabled = true;
       // Eagerly show first image behind the spinner
@@ -686,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function () {
       teaserMask4x.src = './static/images/tokenization_masks_10x10_4x/tokenization_mask_' + p + '.png';
     })();
 
-    showLoading('teaser-loading');
+    showLoading('teaser-loading', 'teaser-demo');
     (function () {
       var allUrls = [];
       allUrls.push('./static/images/fov_traj_grid_10x10_1x/random/006/img_0000.png');
@@ -784,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function preloadSaliencyCurrent() {
-      showLoading('saliency-loading');
+      showLoading('saliency-loading', 'saliency-demo');
       saliencyReady = false;
       eagerLoadSaliencyDefault();
       preloadSaliencySample(saliencyGridIndex, function () {
