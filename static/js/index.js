@@ -222,8 +222,10 @@ document.addEventListener('DOMContentLoaded', function () {
   // Baseline video slideshow (720p)
   // ---------------------------------------------------------------------------
 
-  var baseline720pVideoIds = [12, 15, 1, 24, 20, 28, 34, 36, 41, 14, 19];
-  var video720pEl = document.getElementById('baseline-720p-video');
+  var baseline720pVideoIds = [14, 12, 15, 1, 24, 20, 28, 34, 36, 41, 19];
+  var video720pHrEl = document.getElementById('baseline-720p-video-hr');
+  var video720pNaiveEl = document.getElementById('baseline-720p-video-naive');
+  var video720pOursEl = document.getElementById('baseline-720p-video-ours');
   var prev720pBtn = document.getElementById('baseline-720p-prev');
   var next720pBtn = document.getElementById('baseline-720p-next');
   var baseline720pPromptEl = document.getElementById('baseline-720p-prompt');
@@ -234,11 +236,13 @@ document.addEventListener('DOMContentLoaded', function () {
     updateBaseline720pPrompt();
   });
 
-  if (video720pEl && baseline720pVideoIds.length > 0) {
+  if (video720pHrEl && baseline720pVideoIds.length > 0) {
     var currentIndex720p = 0;
+    var video720pEls = [video720pHrEl, video720pNaiveEl, video720pOursEl];
+    var video720pFolders = ['high_res', 'naive', 'ours'];
 
-    function baseline720pUrl(idx) {
-      return './static/videos/baselines_720p/' + baseline720pVideoIds[idx] + '.mp4';
+    function baseline720pUrl(folder, idx) {
+      return './static/videos/baselines_720p/' + folder + '/' + baseline720pVideoIds[idx] + '.mp4';
     }
 
     function updateBaseline720pPrompt() {
@@ -251,22 +255,32 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadVideo720p(index) {
       currentIndex720p = index;
       showLoading('baseline-720p-loading', 'baseline-720p-container');
-      var url = baseline720pUrl(index);
-      video720pEl.src = url;
-      video720pEl.load();
-      updateBaseline720pPrompt();
+      var readyCount = 0;
 
-      function onReady() {
-        video720pEl.removeEventListener('canplaythrough', onReady);
-        hideLoading('baseline-720p-loading');
-        video720pEl.play().catch(function () {});
-        // Preload neighbors
-        var nextIdx = (index + 1) % baseline720pVideoIds.length;
-        var prevIdx = (index - 1 + baseline720pVideoIds.length) % baseline720pVideoIds.length;
-        preloadVideo(baseline720pUrl(nextIdx), function () {});
-        preloadVideo(baseline720pUrl(prevIdx), function () {});
-      }
-      video720pEl.addEventListener('canplaythrough', onReady, { once: true });
+      video720pFolders.forEach(function (folder, i) {
+        var el = video720pEls[i];
+        var url = baseline720pUrl(folder, index);
+        el.src = url;
+        el.load();
+
+        function onReady() {
+          el.removeEventListener('canplaythrough', onReady);
+          readyCount++;
+          if (readyCount === 3) {
+            hideLoading('baseline-720p-loading');
+            video720pEls.forEach(function (v) { v.play().catch(function () {}); });
+            // Preload neighbors
+            var nextIdx = (index + 1) % baseline720pVideoIds.length;
+            var prevIdx = (index - 1 + baseline720pVideoIds.length) % baseline720pVideoIds.length;
+            video720pFolders.forEach(function (f) {
+              preloadVideo(baseline720pUrl(f, nextIdx), function () {});
+              preloadVideo(baseline720pUrl(f, prevIdx), function () {});
+            });
+          }
+        }
+        el.addEventListener('canplaythrough', onReady, { once: true });
+      });
+      updateBaseline720pPrompt();
     }
 
     loadVideo720p(0);
@@ -282,9 +296,15 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
-    var baseline720pContainer = video720pEl.parentElement;
-    baseline720pContainer.addEventListener('mouseenter', function () { video720pEl.pause(); });
-    baseline720pContainer.addEventListener('mouseleave', function () { video720pEl.play().catch(function () {}); });
+    var baseline720pColsEl = document.querySelector('.baseline-720p-cols');
+    if (baseline720pColsEl) {
+      baseline720pColsEl.addEventListener('mouseenter', function () {
+        video720pEls.forEach(function (v) { v.pause(); });
+      });
+      baseline720pColsEl.addEventListener('mouseleave', function () {
+        video720pEls.forEach(function (v) { v.play().catch(function () {}); });
+      });
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -292,18 +312,22 @@ document.addEventListener('DOMContentLoaded', function () {
   // ---------------------------------------------------------------------------
 
   var baselineImageIds = [8, 10, 35, 29, 61, 3];
-  var baselineImgEl = document.getElementById('baseline-img');
+  var baselineImgHrEl = document.getElementById('baseline-img-hr');
+  var baselineImgNaiveEl = document.getElementById('baseline-img-naive');
+  var baselineImgOursEl = document.getElementById('baseline-img-ours');
   var baselineImgPrevBtn = document.getElementById('baseline-img-prev');
   var baselineImgNextBtn = document.getElementById('baseline-img-next');
   var baselineImgPromptEl = document.getElementById('baseline-img-prompt');
   var baselineImgPrompts = {};
+  var baselineImgFiles = ['img_high_res.png', 'img_naive.png', 'img_ours.png'];
+  var baselineImgEls = [baselineImgHrEl, baselineImgNaiveEl, baselineImgOursEl];
 
   loadOrderedCSV('./static/files/prompts/image_baseline_prompts.csv').then(function (map) {
     baselineImgPrompts = map;
     updateBaselineImgPrompt();
   });
 
-  if (baselineImgEl && baselineImageIds.length > 0) {
+  if (baselineImgHrEl && baselineImageIds.length > 0) {
     var currentImgIndex = 0;
 
     function updateBaselineImgPrompt() {
@@ -313,22 +337,32 @@ document.addEventListener('DOMContentLoaded', function () {
       baselineImgPromptEl.textContent = prompt || '';
     }
 
-    function baselineImgUrls() {
-      return baselineImageIds.map(function (id) {
-        return './static/images/baselines/' + String(id).padStart(5, '0') + '.png';
+    function baselineImgUrl(id, file) {
+      return './static/images/baselines/' + String(id).padStart(5, '0') + '/' + file;
+    }
+
+    function baselineImgAllUrls() {
+      var urls = [];
+      baselineImageIds.forEach(function (id) {
+        baselineImgFiles.forEach(function (file) {
+          urls.push(baselineImgUrl(id, file));
+        });
       });
+      return urls;
     }
 
     function loadBaselineImg(index) {
       currentImgIndex = index;
-      var padded = String(baselineImageIds[index]).padStart(5, '0');
-      setImageFromCache(baselineImgEl, './static/images/baselines/' + padded + '.png');
+      var id = baselineImageIds[index];
+      baselineImgFiles.forEach(function (file, i) {
+        setImageFromCache(baselineImgEls[i], baselineImgUrl(id, file));
+      });
       updateBaselineImgPrompt();
     }
 
-    // Preload all baseline images (only 6, small) then show
+    // Preload all baseline images (6 ids x 3 variants = 18, still small) then show
     showLoading('baseline-img-loading', 'baseline-img-container');
-    preloadBatch(baselineImgUrls(), 6, function () {
+    preloadBatch(baselineImgAllUrls(), 6, function () {
       hideLoading('baseline-img-loading');
       loadBaselineImg(0);
     }, function (loaded, total) {

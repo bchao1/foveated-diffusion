@@ -248,14 +248,14 @@
           <div class="column is-full-width">
             <div id="teaser-demo" style="margin: 0 auto 1.5rem auto; position: relative; min-height: 300px;">
                             <!-- Column headers -->
-              <div style="display: flex; gap: 0.25rem; margin-bottom: 0.5rem;">
+              <div class="teaser-col-headers" style="display: flex; gap: 0.25rem; margin-bottom: 0.5rem;">
                 <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>Full high resolution</strong></p></div>
                 <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>1/2x resolution periphery</strong></p></div>
                 <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>1/4x resolution periphery</strong></p></div>
               </div>
               <!-- Row 1: Generated images -->
-              <div style="display: flex; gap: 0.25rem; position: relative;">
-                <div style="position: absolute; right: 100%; top: 0; bottom: 0; display: flex; align-items: center; padding-right: 0.75rem; white-space: nowrap;"><p class="is-size-6"><strong>Generated image</strong></p></div>
+              <div class="teaser-image-row" style="display: flex; gap: 0.25rem; position: relative;">
+                <div class="teaser-row-label" style="position: absolute; right: 100%; top: 0; bottom: 0; display: flex; align-items: center; padding-right: 0.75rem; white-space: nowrap;"><p class="is-size-6"><strong>Generated image</strong></p></div>
                 <div style="flex: 1;">
                   <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
                     <img id="teaser-img-1x" style="width: 100%; display: block;" alt="">
@@ -276,8 +276,8 @@
                 </div>
               </div>
               <!-- Row 2: Tokenization -->
-              <div style="display: flex; gap: 0.25rem; margin-top: 0.25rem; position: relative;">
-                <div style="position: absolute; right: 100%; top: 0; bottom: 0; display: flex; align-items: center; padding-right: 0.75rem; white-space: nowrap;"><p class="is-size-6"><strong>Tokenization</strong></p></div>
+              <div class="teaser-image-row" style="display: flex; gap: 0.25rem; margin-top: 0.25rem; position: relative;">
+                <div class="teaser-row-label" style="position: absolute; right: 100%; top: 0; bottom: 0; display: flex; align-items: center; padding-right: 0.75rem; white-space: nowrap;"><p class="is-size-6"><strong>Tokenization</strong></p></div>
                 <div style="flex: 1;">
                   <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
                     <img id="teaser-mask-1x" style="width: 100%; display: block;" alt="">
@@ -366,7 +366,7 @@
         <div class="columns is-centered has-text-centered">
           <div class="column is-full-width">
             <h2 class="title is-3">Overview</h2>
-            <div class="content has-text-justified" style="position: relative; z-index: 1; margin-bottom: -2rem;">
+            <div class="content has-text-justified pipeline-text" style="position: relative; z-index: 1; margin-bottom: -2rem;">
               <p>
                 In
                 <strong>Foveated Generation</strong>
@@ -380,7 +380,7 @@
               <img src="./static/images/pipeline_generation.svg" style="width: 100%" />
             </div>
 
-            <div class="content has-text-justified" style="position: relative; z-index: 1; margin-bottom: -2rem;">
+            <div class="content has-text-justified pipeline-text" style="position: relative; z-index: 1; margin-bottom: -2rem;">
               <p>
                 We employ
                 <strong>Foveated Training</strong>
@@ -488,26 +488,31 @@
                 >
                   <i class="fas fa-chevron-left"></i>
                 </button>
-                <div style="flex: 1; min-width: 0">
-                  <div
-                    class="columns is-mobile is-gapless"
-                    style="margin-bottom: 1rem; margin-top: 0rem"
-                  >
-                    <div class="column has-text-centered">
-                      <p class="is-size-6">Full high resolution</p>
-                    </div>
-                    <div class="column has-text-centered">
-                      <p class="is-size-6">Na&iuml;ve mixed resolution</p>
-                    </div>
-                    <div class="column has-text-centered">
-                      <p class="is-size-6"><strong>Foveated Diffusion (Ours)</strong></p>
-                    </div>
+                <div class="baseline-img-cols" style="flex: 1; min-width: 0; display: flex; gap: 0.5rem;">
+                  <div style="flex: 1; min-width: 0;">
+                    <p class="is-size-6 has-text-centered" style="margin-bottom: 0.5rem;">Full high resolution</p>
+                    <img
+                      id="baseline-img-hr"
+                      style="width: 100%; display: block; border-radius: 0"
+                      alt=""
+                    />
                   </div>
-                  <img
-                    id="baseline-img"
-                    style="width: 100%; display: block; border-radius: 0"
-                    alt=""
-                  />
+                  <div style="flex: 1; min-width: 0;">
+                    <p class="is-size-6 has-text-centered" style="margin-bottom: 0.5rem;">Na&iuml;ve mixed resolution</p>
+                    <img
+                      id="baseline-img-naive"
+                      style="width: 100%; display: block; border-radius: 0"
+                      alt=""
+                    />
+                  </div>
+                  <div style="flex: 1; min-width: 0;">
+                    <p class="is-size-6 has-text-centered" style="margin-bottom: 0.5rem;"><strong>Foveated Diffusion (Ours)</strong></p>
+                    <img
+                      id="baseline-img-ours"
+                      style="width: 100%; display: block; border-radius: 0"
+                      alt=""
+                    />
+                  </div>
                 </div>
                 <button
                   id="baseline-img-next"
@@ -561,29 +566,40 @@
                 >
                   <i class="fas fa-chevron-left"></i>
                 </button>
-                <div style="flex: 1; min-width: 0">
-                  <div
-                    class="columns is-mobile is-gapless"
-                    style="margin-bottom: 1rem; margin-top: 0rem"
-                  >
-                    <div class="column has-text-centered">
-                      <p class="is-size-6">Full high resolution</p>
-                    </div>
-                    <div class="column has-text-centered">
-                      <p class="is-size-6">Na&iuml;ve mixed resolution</p>
-                    </div>
-                    <div class="column has-text-centered">
-                      <p class="is-size-6"><strong>Foveated Diffusion (Ours)</strong></p>
-                    </div>
+                <div class="baseline-720p-cols" style="flex: 1; min-width: 0; display: flex; gap: 0.5rem;">
+                  <div style="flex: 1; min-width: 0;">
+                    <p class="is-size-6 has-text-centered" style="margin-bottom: 0.5rem;">Full high resolution</p>
+                    <video
+                      id="baseline-720p-video-hr"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
                   </div>
-                  <video
-                    id="baseline-720p-video"
-                    autoplay
-                    muted
-                    loop
-                    playsinline
-                    style="width: 100%; display: block; border-radius: 0"
-                  ></video>
+                  <div style="flex: 1; min-width: 0;">
+                    <p class="is-size-6 has-text-centered" style="margin-bottom: 0.5rem;">Na&iuml;ve mixed resolution</p>
+                    <video
+                      id="baseline-720p-video-naive"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                  </div>
+                  <div style="flex: 1; min-width: 0;">
+                    <p class="is-size-6 has-text-centered" style="margin-bottom: 0.5rem;"><strong>Foveated Diffusion (Ours)</strong></p>
+                    <video
+                      id="baseline-720p-video-ours"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      style="width: 100%; display: block; border-radius: 0"
+                    ></video>
+                  </div>
                 </div>
                 <button
                   id="baseline-720p-next"
@@ -633,21 +649,21 @@
               </p>
             </div>
 
-            <div id="fov-traj-img-demo" style="display: flex; flex-direction: column; align-items: center; margin: 0 auto 1.5rem auto; width: 41.1vw; position: relative; min-height: 200px;">
+            <div id="fov-traj-img-demo" class="fov-traj-img-demo" style="display: flex; flex-direction: column; align-items: center; margin: 0 auto 1.5rem auto; width: 41.1vw; position: relative; min-height: 200px;">
                             <!-- Column headers -->
-              <div style="display: flex; gap: 0.75rem; width: 100%; margin-bottom: 0.5rem;">
-                <div style="width: 50px; flex-shrink: 0;"></div>
+              <div class="fov-traj-col-headers" style="display: flex; gap: 0.75rem; width: 100%; margin-bottom: 0.5rem;">
+                <div class="nav-btn-spacer" style="width: 50px; flex-shrink: 0;"></div>
                 <div style="flex: 1; display: flex; gap: 0.25rem;">
                   <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>Generated image</strong></p></div>
                   <div style="flex: 1; text-align: center;"><p class="is-size-6" style="margin-bottom: 0;"><strong>Tokenization</strong></p></div>
                 </div>
-                <div style="width: 50px; flex-shrink: 0;"></div>
+                <div class="nav-btn-spacer" style="width: 50px; flex-shrink: 0;"></div>
               </div>
               <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%;">
                 <button id="fov-traj-img-prev" style="width:50px;height:50px;border-radius:50%;border:2px solid #363636;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.25rem;color:#363636;flex-shrink:0;">
                   <i class="fas fa-chevron-left"></i>
                 </button>
-                <div style="flex: 1; display: flex; gap: 0.25rem;">
+                <div class="fov-traj-img-cols" style="flex: 1; display: flex; gap: 0.25rem;">
                   <div style="flex: 1;">
                     <div style="position: relative; width: 100%; cursor: crosshair" class="grid-hover-area">
                       <img id="fov-traj-img-2x" style="width: 100%; display: block;" alt="">
@@ -797,8 +813,8 @@
                 >
                   <i class="fas fa-chevron-left"></i>
                 </button>
-                <div style="display: flex; gap: 1rem">
-                  <div
+                <div class="saliency-cols" style="display: flex; gap: 1rem">
+                  <div class="saliency-col-item"
                     style="display: flex; flex-direction: column; align-items: center; width: 17vw"
                   >
                     <p class="is-size-6 has-text-centered col-label">
@@ -816,7 +832,7 @@
                       ></div>
                     </div>
                   </div>
-                  <div
+                  <div class="saliency-col-item"
                     style="display: flex; flex-direction: column; align-items: center; width: 17vw"
                   >
                     <p class="is-size-6 has-text-centered col-label">
@@ -834,7 +850,7 @@
                       ></div>
                     </div>
                   </div>
-                  <div
+                  <div class="saliency-col-item"
                     style="display: flex; flex-direction: column; align-items: center; width: 17vw"
                   >
                     <p class="is-size-6 has-text-centered col-label">
@@ -900,7 +916,7 @@
                   class="apps-row-label has-text-centered is-size-5"
                   style="margin-bottom: 0.5rem; font-weight: 600"
                 ></p>
-                <div style="display: flex; gap: 0.5rem">
+                <div class="apps-video-row" style="display: flex; gap: 0.5rem">
                   <div class="video-with-prompt" style="flex: 1; min-width: 0">
                     <video
                       class="apps-video"
@@ -971,7 +987,7 @@
                   class="apps-row-label has-text-centered is-size-5"
                   style="margin-bottom: 0.5rem; font-weight: 600"
                 ></p>
-                <div style="display: flex; gap: 0.5rem">
+                <div class="apps-video-row" style="display: flex; gap: 0.5rem">
                   <div class="video-with-prompt" style="flex: 1; min-width: 0">
                     <video
                       class="apps-video"
@@ -1042,7 +1058,7 @@
                   class="apps-row-label has-text-centered is-size-5"
                   style="margin-bottom: 0.5rem; font-weight: 600"
                 ></p>
-                <div style="display: flex; gap: 0.5rem">
+                <div class="apps-video-row" style="display: flex; gap: 0.5rem">
                   <div class="video-with-prompt" style="flex: 1; min-width: 0">
                     <video
                       class="apps-video"
@@ -1161,8 +1177,8 @@
                   <i class="fas fa-chevron-left"></i>
                 </button>
                 <div>
-                  <div style="display: flex; gap: 1rem">
-                    <div
+                  <div class="bbox-cols" style="display: flex; gap: 1rem">
+                    <div class="bbox-col-item"
                       style="
                         display: flex;
                         flex-direction: column;
@@ -1179,7 +1195,7 @@
                         alt=""
                       />
                     </div>
-                    <div
+                    <div class="bbox-col-item"
                       style="
                         display: flex;
                         flex-direction: column;
@@ -1196,7 +1212,7 @@
                         alt=""
                       />
                     </div>
-                    <div
+                    <div class="bbox-col-item"
                       style="
                         display: flex;
                         flex-direction: column;
